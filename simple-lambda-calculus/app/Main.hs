@@ -1,15 +1,17 @@
 import Control.Monad (void)
+import Control.Monad.Trans.State.Lazy (StateT (runStateT), runState)
 import Eval
 import Parser
-import Text.Megaparsec (MonadParsec (eof), runParser)
+import Text.Megaparsec (MonadParsec (eof), runParser, runParserT)
 
 main :: IO ()
 main = do
   void (putStrLn "enter term:")
   word <- getLine
-  let term = runParser (parseTerm <* eof) "" word
-  case term of
+  let p = runStateT parseTerm []
+      result = runParser p "" word
+  case result of
     Left e -> print e
-    Right t -> do
-      print t
-      print $ eval t
+    Right (term, state) -> do
+      putStrLn $ "Term before evaluation: " ++ show term
+      putStrLn $ "Term after evaluation: " ++ show (eval term)

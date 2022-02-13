@@ -2,30 +2,30 @@ module Eval where
 
 import Term
 
-freeVars :: Term -> [String]
-freeVars (Var x) = [x]
-freeVars (App t1 t2) = freeVars t1 ++ freeVars t2
-freeVars (Abs x body) = filter (/= x) $ freeVars body
+shift' :: Int -> Int -> Term -> Term
+shift' c d (Var n l)
+  | n >= c = Var (n + d) (l + d)
+  | otherwise = Var n (l + d)
+shift' c d (Abs x t) = Abs x $ shift' (c + 1) d t
+shift' c d (App t1 t2) = App (shift' c d t1) (shift' c d t2)
 
-substitute :: Term -> Term -> Term -> Term
-substitute x y (Var z)
-  | y == Var z = x
-  | otherwise = Var z
-substitute x y (App a b) = App (substitute x y a) (substitute x y b)
-substitute x y (Abs var body)
-  | x == y = Abs var body
-  | otherwise = Abs newVar $ substitute x y (substitute (Var var) (Var newVar) body)
-  where
-    genNewVar x = if x `elem` freeVars body then x ++ "'" else x
-    newVar = genNewVar var
+shift :: Int -> Term -> Term
+shift = shift' 0
+
+subst :: Term -> Int -> Term -> Term
+subst s j k@(Var n l)
+  | j == n = s
+  | otherwise = k
+subst s j (Abs x t) = Abs x (subst (shift 1 s) (j + 1) t)
+subst s j (App t1 t2) = App (subst s j t1) (subst s j t2)
 
 eval' :: Term -> Maybe Term
-eval' (Var x) = Nothing
-eval' (Abs var body) = Nothing
+eval' (Var _ _) = Nothing
+eval' (Abs _ _) = Nothing
 eval' (App t1 t2) = case t1 of
-  (Abs var body) -> case eval' t2 of
-    Just t2' -> Just $ App (Abs var body) t2'
-    Nothing -> Just $ substitute t2 (Var var) body
+  f@(Abs _ body) -> case eval' t2 of
+    Just t2' -> Just $ App f t2'
+    Nothing -> Just $ shift (-1) (subst (shift 1 t2) 0 body)
   t -> eval' t
 
 eval :: Term -> Term
