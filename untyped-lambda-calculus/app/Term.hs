@@ -12,5 +12,5 @@ instance Show Term where
           case t of
             Var n _ -> ctx !! n
             Abs x t -> "(λ" ++ x ++ "." ++ show' (x : ctx) t ++ ")"
-            App t1 t2 -> "(" ++ show' ctx t1 ++ " " ++ show' ctx t2 ++ ")"
+            App t1 t2 -> show' ctx t1 ++ " " ++ show' ctx t2
      in show' [] t

@@ -23,10 +23,14 @@ eval' :: Term -> Maybe Term
 eval' (Var _ _) = Nothing
 eval' (Abs _ _) = Nothing
 eval' (App t1 t2) = case t1 of
-  f@(Abs _ body) -> case eval' t2 of
-    Just t2' -> Just $ App f t2'
-    Nothing -> Just $ shift (-1) (subst (shift 1 t2) 0 body)
-  t -> eval' t
+  -- t1 is a value
+  (Abs _ t12) -> case t2 of
+    -- t2 is a value: E-AppAbs
+    v1@(Abs _ _) -> Just $ shift (-1) (subst (shift 1 t2) 0 t12)
+    -- t2 is not a value: E-App2
+    _ -> Just $ App t1 (eval t2)
+  -- t1 is not a value: E-App1
+  _ -> Just $ App (eval t1) t2
 
 eval :: Term -> Term
 eval t = case eval' t of
