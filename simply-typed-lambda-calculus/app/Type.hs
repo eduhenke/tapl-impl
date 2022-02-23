@@ -1,16 +1,17 @@
 module Type where
 
 import Data.List (intercalate)
+import Data.Map (Map, toList)
 
 data Type
   = TyBool
   | TyArrow Type Type
   | TyUnit
-  | TyTuple [Type]
+  | TyRecord (Map String Type)
   deriving (Eq, Ord)
 
 instance Show Type where
   show TyBool = "Bool"
   show (TyArrow ty1 ty2) = show ty1 ++ "->" ++ show ty2
   show TyUnit = "Unit"
-  show (TyTuple ts) = "{" ++ intercalate ", " (map show ts) ++ "}"
+  show (TyRecord ts) = "{" ++ intercalate ", " (map (\(l, t) -> l ++ ":" ++ show t) $ toList ts) ++ "}"

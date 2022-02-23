@@ -1,6 +1,7 @@
 module Term where
 
 import Data.List
+import Data.Map (Map, toList)
 import Type
 
 data Binding = NameBind | VarBind Type deriving (Eq, Ord, Show)
@@ -17,8 +18,8 @@ data Term
   | TmUnit
   | TmAscription Term Type
   | TmLet String Term Term
-  | TmTuple [Term]
-  | TmProj Term Int
+  | TmRecord (Map String Term)
+  | TmProj Term String
   deriving (Eq, Ord)
 
 instance Show Term where
@@ -35,6 +36,6 @@ instance Show Term where
                 TmUnit -> "unit"
                 TmAscription t ty -> s t ++ " as " ++ show ty
                 TmLet x t1 t2 -> "let " ++ x ++ "=" ++ s t1 ++ " in " ++ show' (x : ctx) t2
-                TmTuple ts -> "{" ++ intercalate ", " (map (show' ctx) ts) ++ "}"
                 TmProj t i -> show' ctx t ++ "." ++ show i
+                TmRecord ts -> "{" ++ intercalate ", " (map (\(l, t) -> l ++ "=" ++ show' ctx t) $ toList ts) ++ "}"
      in show' [] t

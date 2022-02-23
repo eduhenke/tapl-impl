@@ -1,6 +1,7 @@
 module Eval where
 
 import Data.List (find)
+import Data.Map (fromList, map, toList, (!))
 import Term
 
 shift :: Int -> Term -> Term
@@ -12,6 +13,7 @@ shift =
       shift' c d (App t1 t2) = App (shift' c d t1) (shift' c d t2)
       shift' c d (TmIf cnd t f) = TmIf (shift' c d cnd) (shift' c d t) (shift' c d f)
       shift' c d (TmLet x t1 t2) = TmLet x (shift' c d t1) (shift' (c + 1) d t2)
+      shift' c d (TmRecord ts) = TmRecord (Data.Map.map (shift' c d) ts)
       shift' c d t = t
    in shift' 0
 
@@ -23,6 +25,7 @@ subst s j (TmIf c t f) = TmIf (subst s j c) (subst s j t) (subst s j f)
 subst s j (Abs x ty t) = Abs x ty (subst (shift 1 s) (j + 1) t)
 subst s j (App t1 t2) = App (subst s j t1) (subst s j t2)
 subst s j (TmLet x t1 t2) = TmLet x (subst s j t1) (subst (shift 1 s) (j + 1) t2)
+subst s j (TmRecord ts) = TmRecord (Data.Map.map (subst s j) ts)
 subst s j t = t
 
 isVal :: Term -> Bool
@@ -30,7 +33,7 @@ isVal TmTrue = True
 isVal TmFalse = True
 isVal Abs {} = True
 isVal TmUnit = True
-isVal (TmTuple ts) = all isVal ts
+isVal (TmRecord ts) = all isVal ts
 isVal _ = False
 
 betaReduction :: Term -> Term -> Term
@@ -59,21 +62,22 @@ eval' (TmLet x t1 t2)
   | isVal t1 = Just $ betaReduction t2 t1
   | otherwise = Just $ TmLet x (eval t1) t2
 eval' (TmProj t i) = case t of
-  (TmTuple ts) ->
+  (TmRecord ts) ->
     Just $
       if all isVal ts
-        then ts !! i -- E-ProjTuple
+        then ts ! i -- E-ProjTuple
         else TmProj (eval t) i -- E-Proj
   _ -> Just $ TmProj (eval t) i -- E-Proj
-eval' t@(TmTuple ts)
+eval' t@(TmRecord ts)
   | isVal t = Nothing
   -- E-Tuple
-  | otherwise = Just $ TmTuple (evalFirstNonVal ts)
+  | otherwise = Just $ TmRecord (fromList $ evalFirstNonVal (toList ts))
   where
+    evalFirstNonVal :: [(String, Term)] -> [(String, Term)]
     evalFirstNonVal [] = []
-    evalFirstNonVal (t : ts)
-      | isVal t = t : evalFirstNonVal ts
-      | otherwise = eval t : ts
+    evalFirstNonVal ((label, t) : ts)
+      | isVal t = (label, t) : evalFirstNonVal ts
+      | otherwise = (label, eval t) : ts
 eval' _ = Nothing
 
 eval :: Term -> Term

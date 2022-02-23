@@ -1,4 +1,5 @@
 import Data.List
+import Data.Map (fromList)
 import Data.Ord
 import Error
 import Eval
@@ -126,9 +127,9 @@ unitTests =
           []
           (compile "{true, \\x:Bool.x}")
           ( Right
-              ( TmTuple [TmTrue, Abs "x" TyBool (Var 0 1)],
-                TyTuple [TyBool, TyArrow TyBool TyBool],
-                TmTuple [TmTrue, Abs "x" TyBool (Var 0 1)]
+              ( TmRecord . fromList $ [("1", TmTrue), ("2", Abs "x" TyBool (Var 0 1))],
+                TyRecord . fromList $ [("1", TyBool), ("2", TyArrow TyBool TyBool)],
+                TmRecord . fromList $ [("1", TmTrue), ("2", Abs "x" TyBool (Var 0 1))]
               )
           ),
       testCase
@@ -137,9 +138,9 @@ unitTests =
           []
           (compile "\\x:{Bool, Unit}.x")
           ( Right
-              ( Abs "x" (TyTuple [TyBool, TyUnit]) (Var 0 1),
-                TyArrow (TyTuple [TyBool, TyUnit]) (TyTuple [TyBool, TyUnit]),
-                Abs "x" (TyTuple [TyBool, TyUnit]) (Var 0 1)
+              ( Abs "x" (TyRecord . fromList $ [("1", TyBool), ("2", TyUnit)]) (Var 0 1),
+                TyArrow (TyRecord . fromList $ [("1", TyBool), ("2", TyUnit)]) (TyRecord . fromList $ [("1", TyBool), ("2", TyUnit)]),
+                Abs "x" (TyRecord . fromList $ [("1", TyBool), ("2", TyUnit)]) (Var 0 1)
               )
           ),
       testCase
@@ -148,9 +149,59 @@ unitTests =
           []
           (compile "{true, false}.1")
           ( Right
-              ( TmProj (TmTuple [TmTrue, TmFalse]) 0,
+              ( TmProj (TmRecord . fromList $ [("1", TmTrue), ("2", TmFalse)]) "1",
                 TyBool,
                 TmTrue
+              )
+          ),
+      testCase
+        "Record expression"
+        $ assertEqual
+          []
+          (compile "{first=true, second=false}")
+          ( Right
+              ( TmRecord $ fromList [("first", TmTrue), ("second", TmFalse)],
+                TyRecord $ fromList [("first", TyBool), ("second", TyBool)],
+                TmRecord $ fromList [("first", TmTrue), ("second", TmFalse)]
+              )
+          ),
+      testCase
+        "Record projection expression"
+        $ assertEqual
+          []
+          (compile "{first=true, second=false}.second")
+          ( Right
+              ( TmProj (TmRecord $ fromList [("first", TmTrue), ("second", TmFalse)]) "second",
+                TyBool,
+                TmFalse
+              )
+          ),
+      testCase
+        "Record type expression"
+        $ assertEqual
+          []
+          (compile "\\x:{first:Bool}.true")
+          ( Right
+              ( Abs "x" (TyRecord . fromList $ [("first", TyBool)]) TmTrue,
+                TyArrow (TyRecord . fromList $ [("first", TyBool)]) TyBool,
+                Abs "x" (TyRecord . fromList $ [("first", TyBool)]) TmTrue
+              )
+          ),
+      testCase
+        "Record projection on inexistent label fails typechecking"
+        $ assertEqual
+          []
+          (compile "{first=true, second=false}.third")
+          (Left $ TypecheckerError InvalidProjection),
+      testCase
+        "Record projection with abstraction expression"
+        $ assertEqual
+          []
+          (compile "(\\x:Bool.{a=x}) true")
+          ( Right
+              ( App (Abs "x" TyBool (TmRecord . fromList $ [("a", Var 0 1)])) TmTrue,
+                TyRecord . fromList $ [("a", TyBool)],
+                TmRecord . fromList $ [("a", TmTrue)]
               )
           )
     ]

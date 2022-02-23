@@ -5,6 +5,7 @@ import Control.Monad.Identity (Identity)
 import Control.Monad.State
 import Data.Functor (void)
 import Data.List (elemIndex)
+import Data.Map (fromList)
 import Data.Text (Text, pack)
 import Data.Void
 import Error
@@ -46,8 +47,20 @@ parseArrowType = do
   ty2 <- parseType
   return $ TyArrow ty1 ty2
 
-parseTupleType :: Parser Type
-parseTupleType = between (symbol "{") (symbol "}") (TyTuple <$> sepBy parseType (symbol ","))
+parseRecordType :: Parser Type
+parseRecordType =
+  between
+    (symbol "{")
+    (symbol "}")
+    (TyRecord . fromList <$> (try parseRecordElements <|> parseTupleElements))
+  where
+    parseRecordElement = do
+      label <- parseRecordLabel
+      void $ symbol ":"
+      t <- parseType
+      return (label, t)
+    parseTupleElements = zip (map show [1 ..]) <$> sepBy parseType (symbol ",")
+    parseRecordElements = sepBy parseRecordElement (symbol ",")
 
 parseBaseType :: Parser Type
 parseBaseType = bool <|> unit
@@ -56,7 +69,7 @@ parseBaseType = bool <|> unit
     unit = TyUnit <$ symbol "Unit"
 
 parseType :: Parser Type
-parseType = lexeme $ try parseArrowType <|> parseBaseType <|> parseTupleType <|> parens parseType
+parseType = lexeme $ try parseArrowType <|> parseBaseType <|> parseRecordType <|> parens parseType
 
 parseBool :: Parser Term
 parseBool = t <|> f <?> "bool"
@@ -100,12 +113,23 @@ parseLet = do
   modify tail
   return $ TmLet varName t1 t2
 
-parseTuple :: Parser Term
-parseTuple =
+parseRecordLabel :: Parser String
+parseRecordLabel = some (letterChar <|> numberChar)
+
+parseRecord :: Parser Term
+parseRecord =
   between
     (symbol "{")
     (symbol "}")
-    (TmTuple <$> sepBy parseTerm (symbol ","))
+    (TmRecord . fromList <$> (try parseRecordElements <|> parseTupleElements))
+  where
+    parseRecordElement = do
+      label <- parseRecordLabel
+      void $ symbol "="
+      t <- parseTerm
+      return (label, t)
+    parseTupleElements = zip (map show [1 ..]) <$> sepBy parseTerm (symbol ",")
+    parseRecordElements = sepBy parseRecordElement (symbol ",")
 
 parseSeq :: Parser Term
 parseSeq = do
@@ -132,7 +156,7 @@ parseNonApp = makeExprParser parsers operatorTable
         <|> parseIf
         <|> parseAbs
         <|> parseLet
-        <|> parseTuple
+        <|> parseRecord
         <|> try parseVar
         <|> parens parseTerm
 
@@ -144,7 +168,7 @@ operatorTable =
   [ [ binary ";" $ \t1 t2 -> App (Abs "_" TyUnit t2) t1
     ],
     [ Postfix $ (\ty term -> TmAscription term ty) <$> (symbol " as" *> parseType),
-      Postfix $ (\i t -> TmProj t (read i - 1)) <$> (symbol "." *> some numberChar)
+      Postfix $ (\i t -> TmProj t i) <$> (symbol "." *> parseRecordLabel)
     ]
   ]
 
