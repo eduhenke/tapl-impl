@@ -1,14 +1,15 @@
 module Parser where
 
-import Control.Monad.Combinators.Expr (Operator (InfixL), makeExprParser)
+import Control.Monad.Combinators.Expr (Operator (InfixL, Postfix), makeExprParser)
 import Control.Monad.Identity (Identity)
 import Control.Monad.State
 import Data.Functor (void)
 import Data.List (elemIndex)
 import Data.Text (Text, pack)
 import Data.Void
+import Error
 import Term
-import Text.Megaparsec hiding (State)
+import Text.Megaparsec hiding (ParseError, State)
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Type
@@ -36,26 +37,32 @@ getDeBruijnIndex v ctx = case elemIndex v (map fst ctx) of
   Just n -> pure $ Var n (length ctx)
 
 parseVarName :: Parser String
-parseVarName = many letterChar
+parseVarName = some letterChar
 
 parseTypeArrow :: Parser Type
 parseTypeArrow = do
-  ty1 <- parseTypeBool
+  ty1 <- parseBaseType
   void $ symbol "->"
   ty2 <- parseType
   return $ TyArrow ty1 ty2
 
-parseTypeBool :: Parser Type
-parseTypeBool = TyBool <$ symbol "Bool"
+parseBaseType :: Parser Type
+parseBaseType = bool <|> unit
+  where
+    bool = TyBool <$ symbol "Bool"
+    unit = TyUnit <$ symbol "Unit"
 
 parseType :: Parser Type
-parseType = lexeme $ try parseTypeArrow <|> parseTypeBool <|> parens parseType
+parseType = lexeme $ try parseTypeArrow <|> parseBaseType <|> parens parseType
 
 parseBool :: Parser Term
 parseBool = t <|> f <?> "bool"
   where
     t = TmTrue <$ string "true"
     f = TmFalse <$ string "false"
+
+parseUnit :: Parser Term
+parseUnit = TmUnit <$ string "unit"
 
 parseIf :: Parser Term
 parseIf = do
@@ -78,6 +85,25 @@ parseAbs = do
   modify tail
   return $ Abs varName ty term
 
+parseLet :: Parser Term
+parseLet = do
+  void $ symbol "let"
+  varName <- lexeme parseVarName
+  void $ symbol "="
+  t1 <- lexeme parseNonApp
+  void $ symbol "in"
+  modify ((varName, NameBind) :)
+  t2 <- parseTerm
+  modify tail
+  return $ TmLet varName t1 t2
+
+parseSeq :: Parser Term
+parseSeq = do
+  t1 <- parseNonApp
+  void (symbol ";")
+  t2 <- parseNonApp
+  return $ App (Abs "_" TyUnit t2) t1
+
 parseVar :: Parser Term
 parseVar = do
   varName <- parseVarName
@@ -88,15 +114,40 @@ parens :: Parser a -> Parser a
 parens = between (char '(') (char ')')
 
 parseNonApp :: Parser Term
-parseNonApp =
-  try parseBool
-    <|> try parseIf
-    <|> try parseAbs
-    <|> try parseVar
-    <|> try (parens parseTerm)
+parseNonApp = makeExprParser parsers operatorTable
+  where
+    parsers =
+      parseUnit
+        <|> parseBool
+        <|> parseIf
+        <|> parseAbs
+        <|> parseLet
+        <|> try parseVar
+        <|> parens parseTerm
 
 binary :: String -> (Term -> Term -> Term) -> Operator Parser Term
 binary name f = InfixL (f <$ string name)
 
+operatorTable :: [[Operator Parser Term]]
+operatorTable =
+  [ [ binary ";" $ \t1 t2 -> App (Abs "_" TyUnit t2) t1
+    ],
+    [ Postfix $ (\ty term -> TmAscription term ty) <$> (symbol " as" *> parseType)
+    ]
+  ]
+
 parseTerm :: Parser Term
-parseTerm = makeExprParser parseNonApp [[binary " " App]]
+parseTerm = chainl1 parseNonApp (App <$ space1)
+
+chainl1 :: Parser a -> Parser (a -> a -> a) -> Parser a
+chainl1 p op = p >>= rest
+  where
+    rest x = ((($ x) <$> op <*> p) >>= rest) <|> return x
+
+parse :: String -> Either CompilerError Term
+parse input = case result of
+  Left e -> Left $ ParserError e
+  Right (term, state) -> pure term
+  where
+    p = runStateT (parseTerm <* eof) []
+    result = runParser p "" input

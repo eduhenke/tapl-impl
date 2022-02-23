@@ -1,0 +1,4 @@
+let and=(\x:Bool.\y:Bool. if x then y else false) in
+let not=(\x:Bool. if x then false else true) in
+let or=(\x:Bool.\y:Bool. if x then true else y) in
+    and (not (or false true)) true

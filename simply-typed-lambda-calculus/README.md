@@ -1,4 +1,4 @@
-# simply-typed-lambda-calculus
+# simply-typed-lambda-calculus(with extensions)
 
 Terms and values:
 ```
@@ -9,16 +9,26 @@ t ::=
   true
   false
   if t then t else t
+  unit
 
 v ::=
   \x:T.t   // abstraction value
+  true
+  false
+  unit
 ```
 
 Types:
 ```
 T ::=
   Bool
+  Unit
   T -> T
+```
+
+Derived forms:
+```
+t1;t2 === (λx:Unit.t2) t1, where x is not a free variable on t2
 ```
 
 ## Examples
