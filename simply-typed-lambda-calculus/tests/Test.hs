@@ -223,5 +223,16 @@ unitTests =
                 TyBool,
                 TmTrue
               )
+          ),
+      testCase
+        "Fix expression"
+        $ assertEqual
+          []
+          (compile "fix \\x:Bool.true")
+          ( Right
+              ( TmFix (Abs "x" TyBool TmTrue),
+                TyBool,
+                TmTrue
+              )
           )
     ]

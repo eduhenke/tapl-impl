@@ -70,6 +70,11 @@ typeOf ctx (TmCase t cases) = do
             then Right ty
             else Left CaseBranchesTypesMustMatchVariantType
     _ -> Left CaseMustBeAppliedToVariant
+typeOf ctx (TmFix t) = do
+  ty <- typeOf ctx t
+  case ty of
+    TyArrow x y -> if x == y then Right x else Left FixMustBeAppliedToAnArrowTypeWithSameDomainAndImage
+    _ -> Left FixMustBeAppliedToAnArrowTypeWithSameDomainAndImage
 
 typeCheck :: Term -> Either CompilerError Type
 typeCheck term = case typeOf [] term of

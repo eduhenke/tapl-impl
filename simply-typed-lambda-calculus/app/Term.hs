@@ -22,6 +22,7 @@ data Term
   | TmProj Term String
   | TmVariant Term String Type
   | TmCase Term (Map String (String, Term))
+  | TmFix Term
   deriving (Eq, Ord)
 
 instance Show Term where
@@ -42,4 +43,5 @@ instance Show Term where
                 TmRecord ts -> "{" ++ intercalate ", " (map (\(l, t) -> l ++ "=" ++ show' ctx t) $ toList ts) ++ "}"
                 TmVariant t l ty -> "<" ++ l ++ "=" ++ show' ctx t ++ "> as " ++ show ty
                 TmCase t cases -> "case " ++ show' ctx t ++ " of\n\t" ++ intercalate "\n\t" (map (\(l, (x, t)) -> "<" ++ l ++ "=" ++ x ++ "> => " ++ show' (x : ctx) t) $ toList cases)
+                TmFix t -> "fix " ++ show' ctx t
      in show' [] t

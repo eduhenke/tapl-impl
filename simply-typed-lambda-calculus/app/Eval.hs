@@ -101,6 +101,12 @@ eval' (TmVariant t l ty)
   | otherwise =
     -- E-Variant
     Just $ TmVariant (eval t) l ty
+eval' t@(TmFix (Abs x ty t2)) =
+  return $ betaReduction t2 t
+eval' (TmFix t) = do
+  -- E-Fix
+  t' <- eval' t
+  return $ TmFix t'
 eval' _ = Nothing
 
 eval :: Term -> Term

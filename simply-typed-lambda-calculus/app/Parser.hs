@@ -180,6 +180,9 @@ parseCase = do
       modify tail
       return (label, (x, t))
 
+parseFix :: Parser Term
+parseFix = TmFix <$> (symbol "fix" *> parseTerm)
+
 parseSeq :: Parser Term
 parseSeq = do
   t1 <- parseNonApp
@@ -208,6 +211,7 @@ parseNonApp = makeExprParser parsers operatorTable
         <|> parseRecord
         <|> parseVariant
         <|> parseCase
+        <|> parseFix
         <|> try parseVar
         <|> parens parseTerm
 

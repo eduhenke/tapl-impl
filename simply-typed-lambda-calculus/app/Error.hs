@@ -19,6 +19,7 @@ data TypeError
   | CaseMustBeAppliedToVariant
   | NonMatchingBranchesOfCaseWithVariantType
   | CaseBranchesTypesMustMatchVariantType
+  | FixMustBeAppliedToAnArrowTypeWithSameDomainAndImage
   deriving (Eq, Show)
 
 data CompilerError = ParserError ParseError | TypecheckerError TypeError
