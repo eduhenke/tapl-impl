@@ -41,6 +41,13 @@ typeOf ctx (TmLet x t1 t2) = do
   ty1 <- typeOf ctx t1
   let ctx' = (x, VarBind ty1) : ctx
   typeOf ctx' t2
+typeOf ctx (TmTuple ts) = TyTuple <$> mapM (typeOf ctx) ts
+typeOf ctx (TmProj t i) = case typeOf ctx t of
+  (Right (TyTuple ts)) ->
+    if i < length ts
+      then Right $ ts !! i
+      else Left InvalidProjection
+  _ -> Left ProjectionNotAppliedToATuple
 
 typeCheck :: Term -> Either CompilerError Type
 typeCheck term = case typeOf [] term of

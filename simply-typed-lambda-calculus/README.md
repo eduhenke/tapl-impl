@@ -10,12 +10,17 @@ t ::=
   false
   if t then t else t
   unit
+  t as T
+  let x=t in t
+  {t_i}    // with i=1..n
+  t.i
 
 v ::=
   \x:T.t   // abstraction value
   true
   false
   unit
+  {v_i}    // with i=1..n
 ```
 
 Types:
@@ -24,6 +29,7 @@ T ::=
   Bool
   Unit
   T -> T
+  {T_i}    // with i=1..n
 ```
 
 Derived forms:

@@ -39,12 +39,15 @@ getDeBruijnIndex v ctx = case elemIndex v (map fst ctx) of
 parseVarName :: Parser String
 parseVarName = some letterChar
 
-parseTypeArrow :: Parser Type
-parseTypeArrow = do
+parseArrowType :: Parser Type
+parseArrowType = do
   ty1 <- parseBaseType
   void $ symbol "->"
   ty2 <- parseType
   return $ TyArrow ty1 ty2
+
+parseTupleType :: Parser Type
+parseTupleType = between (symbol "{") (symbol "}") (TyTuple <$> sepBy parseType (symbol ","))
 
 parseBaseType :: Parser Type
 parseBaseType = bool <|> unit
@@ -53,7 +56,7 @@ parseBaseType = bool <|> unit
     unit = TyUnit <$ symbol "Unit"
 
 parseType :: Parser Type
-parseType = lexeme $ try parseTypeArrow <|> parseBaseType <|> parens parseType
+parseType = lexeme $ try parseArrowType <|> parseBaseType <|> parseTupleType <|> parens parseType
 
 parseBool :: Parser Term
 parseBool = t <|> f <?> "bool"
@@ -97,6 +100,13 @@ parseLet = do
   modify tail
   return $ TmLet varName t1 t2
 
+parseTuple :: Parser Term
+parseTuple =
+  between
+    (symbol "{")
+    (symbol "}")
+    (TmTuple <$> sepBy parseTerm (symbol ","))
+
 parseSeq :: Parser Term
 parseSeq = do
   t1 <- parseNonApp
@@ -122,6 +132,7 @@ parseNonApp = makeExprParser parsers operatorTable
         <|> parseIf
         <|> parseAbs
         <|> parseLet
+        <|> parseTuple
         <|> try parseVar
         <|> parens parseTerm
 
@@ -132,7 +143,8 @@ operatorTable :: [[Operator Parser Term]]
 operatorTable =
   [ [ binary ";" $ \t1 t2 -> App (Abs "_" TyUnit t2) t1
     ],
-    [ Postfix $ (\ty term -> TmAscription term ty) <$> (symbol " as" *> parseType)
+    [ Postfix $ (\ty term -> TmAscription term ty) <$> (symbol " as" *> parseType),
+      Postfix $ (\i t -> TmProj t (read i - 1)) <$> (symbol "." *> some numberChar)
     ]
   ]
 

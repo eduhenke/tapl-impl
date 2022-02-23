@@ -1,5 +1,6 @@
 module Eval where
 
+import Data.List (find)
 import Term
 
 shift :: Int -> Term -> Term
@@ -29,6 +30,7 @@ isVal TmTrue = True
 isVal TmFalse = True
 isVal Abs {} = True
 isVal TmUnit = True
+isVal (TmTuple ts) = all isVal ts
 isVal _ = False
 
 betaReduction :: Term -> Term -> Term
@@ -56,6 +58,22 @@ eval' (TmLet x t1 t2)
   -- it's zero, because when parsing we add another entry to the context
   | isVal t1 = Just $ betaReduction t2 t1
   | otherwise = Just $ TmLet x (eval t1) t2
+eval' (TmProj t i) = case t of
+  (TmTuple ts) ->
+    Just $
+      if all isVal ts
+        then ts !! i -- E-ProjTuple
+        else TmProj (eval t) i -- E-Proj
+  _ -> Just $ TmProj (eval t) i -- E-Proj
+eval' t@(TmTuple ts)
+  | isVal t = Nothing
+  -- E-Tuple
+  | otherwise = Just $ TmTuple (evalFirstNonVal ts)
+  where
+    evalFirstNonVal [] = []
+    evalFirstNonVal (t : ts)
+      | isVal t = t : evalFirstNonVal ts
+      | otherwise = eval t : ts
 eval' _ = Nothing
 
 eval :: Term -> Term

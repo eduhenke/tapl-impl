@@ -12,6 +12,8 @@ data TypeError
   | TypeArrowExpected
   | TypeAppArgumentMustMatch
   | TypeOfAscriptionMustMatch
+  | ProjectionNotAppliedToATuple
+  | InvalidProjection
   deriving (Eq, Show)
 
 data CompilerError = ParserError ParseError | TypecheckerError TypeError

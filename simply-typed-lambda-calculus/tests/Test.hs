@@ -119,5 +119,38 @@ unitTests =
                 TyBool,
                 TmFalse
               )
+          ),
+      testCase
+        "Tuple expression"
+        $ assertEqual
+          []
+          (compile "{true, \\x:Bool.x}")
+          ( Right
+              ( TmTuple [TmTrue, Abs "x" TyBool (Var 0 1)],
+                TyTuple [TyBool, TyArrow TyBool TyBool],
+                TmTuple [TmTrue, Abs "x" TyBool (Var 0 1)]
+              )
+          ),
+      testCase
+        "Tuple type expression"
+        $ assertEqual
+          []
+          (compile "\\x:{Bool, Unit}.x")
+          ( Right
+              ( Abs "x" (TyTuple [TyBool, TyUnit]) (Var 0 1),
+                TyArrow (TyTuple [TyBool, TyUnit]) (TyTuple [TyBool, TyUnit]),
+                Abs "x" (TyTuple [TyBool, TyUnit]) (Var 0 1)
+              )
+          ),
+      testCase
+        "Tuple projection expression"
+        $ assertEqual
+          []
+          (compile "{true, false}.1")
+          ( Right
+              ( TmProj (TmTuple [TmTrue, TmFalse]) 0,
+                TyBool,
+                TmTrue
+              )
           )
     ]
