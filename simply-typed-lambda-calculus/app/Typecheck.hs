@@ -9,6 +9,7 @@ import Type
 typeOf :: Context -> Term -> Either TypeError Type
 typeOf _ TmFalse = Right TyBool
 typeOf _ TmTrue = Right TyBool
+typeOf _ TmZero = Right TyNat
 typeOf _ TmUnit = Right TyUnit
 typeOf ctx (TmIf c t f) =
   if typeOf ctx c == Right TyBool
@@ -19,6 +20,15 @@ typeOf ctx (TmIf c t f) =
             then tyT
             else Left TypeOfArmsMustMatch
     else Left TypeOfConditionMustBeBool
+typeOf ctx (TmSucc t)
+  | typeOf ctx t == Right TyNat = Right TyNat
+  | otherwise = Left TypeMustBeNat
+typeOf ctx (TmPred t)
+  | typeOf ctx t == Right TyNat = Right TyNat
+  | otherwise = Left TypeMustBeNat
+typeOf ctx (TmIsZero t)
+  | typeOf ctx t == Right TyNat = Right TyBool
+  | otherwise = Left TypeMustBeNat
 typeOf ctx (Var n _) =
   let (_, VarBind ty) = (ctx !! n)
    in Right ty

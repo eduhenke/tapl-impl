@@ -12,6 +12,10 @@ data Term
   = TmTrue
   | TmFalse
   | TmIf Term Term Term
+  | TmZero
+  | TmSucc Term
+  | TmPred Term
+  | TmIsZero Term
   | Var Int Int
   | Abs String Type Term
   | App Term Term
@@ -44,4 +48,8 @@ instance Show Term where
                 TmVariant t l ty -> "<" ++ l ++ "=" ++ show' ctx t ++ "> as " ++ show ty
                 TmCase t cases -> "case " ++ show' ctx t ++ " of\n\t" ++ intercalate "\n\t" (map (\(l, (x, t)) -> "<" ++ l ++ "=" ++ x ++ "> => " ++ show' (x : ctx) t) $ toList cases)
                 TmFix t -> "fix " ++ show' ctx t
+                TmZero -> "0"
+                TmSucc t -> "succ(" ++ show' ctx t ++ ")"
+                TmPred t -> "pred(" ++ show' ctx t ++ ")"
+                TmIsZero t -> "zero? " ++ show' ctx t
      in show' [] t

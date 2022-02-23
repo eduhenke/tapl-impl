@@ -199,6 +199,12 @@ parseVar = do
 parens :: Parser a -> Parser a
 parens = between (char '(') (char ')')
 
+parseZero, parseSucc, parsePred, parseIsZero :: Parser Term
+parseZero = TmZero <$ symbol "0"
+parseSucc = TmSucc <$> (symbol "succ" *> parseTerm)
+parsePred = TmPred <$> (symbol "pred" *> parseTerm)
+parseIsZero = TmIsZero <$> (symbol "zero?" *> parseTerm)
+
 parseNonApp :: Parser Term
 parseNonApp = makeExprParser parsers operatorTable
   where
@@ -206,6 +212,10 @@ parseNonApp = makeExprParser parsers operatorTable
       parseUnit
         <|> parseBool
         <|> parseIf
+        <|> parseZero
+        <|> parseSucc
+        <|> parsePred
+        <|> parseIsZero
         <|> parseAbs
         <|> parseLet
         <|> parseRecord

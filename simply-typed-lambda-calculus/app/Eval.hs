@@ -10,6 +10,7 @@ termWalk t onVar c =
   let walk c t = case t of
         Var x n -> onVar c x n
         TmIf cnd t f -> TmIf (walk c cnd) (walk c t) (walk c f)
+        TmIsZero t -> TmIsZero (walk c t)
         Abs x ty t -> Abs x ty (walk (c + 1) t)
         App t1 t2 -> App (walk c t1) (walk c t2)
         TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
@@ -33,9 +34,15 @@ subst s j t = termWalk t onVar j
       | c == x = s
       | otherwise = Var x n
 
+isNumVal :: Term -> Bool
+isNumVal TmZero = True
+isNumVal (TmSucc t) = isNumVal t
+
 isVal :: Term -> Bool
 isVal TmTrue = True
 isVal TmFalse = True
+isVal TmZero = isNumVal TmZero
+isVal (TmSucc t) = isNumVal t
 isVal Abs {} = True
 isVal TmUnit = True
 isVal (TmRecord ts) = all isVal ts
@@ -61,6 +68,13 @@ eval' (App t1 t2)
 eval' (TmIf TmTrue t f) = Just t
 eval' (TmIf TmFalse t f) = Just f
 eval' (TmIf c t f) = Just $ TmIf (eval c) t f
+eval' (TmSucc t) = TmSucc <$> eval' t -- E-Succ
+eval' (TmPred TmZero) = Just TmZero -- E-PredZero
+eval' (TmPred (TmSucc t)) = Just t -- E-PredSucc
+eval' (TmPred t) = TmPred <$> eval' t -- E-Pred
+eval' (TmIsZero TmZero) = Just TmTrue -- E-IszeroZero
+eval' (TmIsZero (TmSucc t)) | isNumVal t = Just TmFalse -- E-IszeroSucc
+eval' (TmIsZero t) = Just $ TmIsZero (eval t) -- E-IsZero
 eval' (TmAscription t ty)
   | isVal t = Just t
   | otherwise = Just $ TmAscription (eval t) ty

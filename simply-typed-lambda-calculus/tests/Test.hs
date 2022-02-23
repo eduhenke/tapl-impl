@@ -67,6 +67,26 @@ unitTests =
                 TmFalse
               )
           ),
+      testCase "Nat expression" $
+        assertEqual
+          []
+          (compile "pred succ succ 0")
+          ( Right
+              ( TmPred (TmSucc (TmSucc TmZero)),
+                TyNat,
+                TmSucc TmZero
+              )
+          ),
+      testCase "Nat and bool expression" $
+        assertEqual
+          []
+          (compile "if (zero? pred succ 0) then true else false")
+          ( Right
+              ( TmIf (TmIsZero (TmPred (TmSucc TmZero))) TmTrue TmFalse,
+                TyBool,
+                TmTrue
+              )
+          ),
       testCase "Arrow type" $
         assertEqual
           []

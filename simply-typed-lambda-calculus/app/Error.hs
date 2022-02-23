@@ -8,6 +8,7 @@ type ParseError = ParseErrorBundle String Void
 data TypeError
   = TypeOfConditionMustBeBool
   | TypeOfArmsMustMatch
+  | TypeMustBeNat
   | TypeOfVarNotSpecified
   | TypeArrowExpected
   | TypeAppArgumentMustMatch
