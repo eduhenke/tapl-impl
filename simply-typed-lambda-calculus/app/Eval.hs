@@ -1,5 +1,6 @@
 module Eval where
 
+import Data.Bifunctor (second)
 import Data.List (find)
 import Data.Map (fromList, map, toList, (!))
 import Term
@@ -13,6 +14,7 @@ termWalk t onVar c =
         App t1 t2 -> App (walk c t1) (walk c t2)
         TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
         TmRecord ts -> TmRecord (Data.Map.map (walk c) ts)
+        TmCase t cases -> TmCase (walk c t) (Data.Map.map (second (walk (c + 1))) cases)
         t -> t
    in walk c t
 
@@ -80,6 +82,19 @@ eval' t@(TmRecord ts)
     evalFirstNonVal ((label, t) : ts)
       | isVal t = (label, t) : evalFirstNonVal ts
       | otherwise = (label, eval t) : ts
+eval' (TmCase t@(TmVariant v l ty) cases)
+  -- E-CaseVariant
+  | isVal v =
+    let (x, t') = cases ! l
+     in Just $ betaReduction t' v
+  -- E-Case
+  | otherwise = Just $ TmCase (eval t) cases
+eval' (TmCase t cases) =
+  -- E-Case
+  Just $ TmCase (eval t) cases
+eval' (TmVariant t l ty) =
+  -- E-Variant
+  Just $ TmVariant (eval t) l ty
 eval' _ = Nothing
 
 eval :: Term -> Term

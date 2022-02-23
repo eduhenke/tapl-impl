@@ -20,6 +20,8 @@ data Term
   | TmLet String Term Term
   | TmRecord (Map String Term)
   | TmProj Term String
+  | TmVariant Term String Type
+  | TmCase Term (Map String (String, Term))
   deriving (Eq, Ord)
 
 instance Show Term where
@@ -38,4 +40,6 @@ instance Show Term where
                 TmLet x t1 t2 -> "let " ++ x ++ "=" ++ s t1 ++ " in " ++ show' (x : ctx) t2
                 TmProj t i -> show' ctx t ++ "." ++ show i
                 TmRecord ts -> "{" ++ intercalate ", " (map (\(l, t) -> l ++ "=" ++ show' ctx t) $ toList ts) ++ "}"
+                TmVariant t l ty -> "<" ++ l ++ "=" ++ show' ctx t ++ "> as " ++ show ty
+                TmCase t cases -> "case " ++ show' ctx t ++ " of\n\t" ++ intercalate "\n\t" (map (\(l, (x, t)) -> "<" ++ l ++ "=" ++ x ++ "> => " ++ show' (x : ctx) t) $ toList cases)
      in show' [] t

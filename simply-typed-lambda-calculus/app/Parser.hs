@@ -62,6 +62,19 @@ parseRecordType =
     parseTupleElements = zip (map show [1 ..]) <$> sepBy parseType (symbol ",")
     parseRecordElements = sepBy parseRecordElement (symbol ",")
 
+parseVariantType :: Parser Type
+parseVariantType =
+  between
+    (symbol "<")
+    (symbol ">")
+    (TyVariant . fromList <$> sepBy parseVariantElement (symbol ","))
+  where
+    parseVariantElement = do
+      label <- parseVariantLabel
+      void $ symbol ":"
+      t <- parseType
+      return (label, t)
+
 parseBaseType :: Parser Type
 parseBaseType = bool <|> unit
   where
@@ -69,7 +82,7 @@ parseBaseType = bool <|> unit
     unit = TyUnit <$ symbol "Unit"
 
 parseType :: Parser Type
-parseType = lexeme $ try parseArrowType <|> parseBaseType <|> parseRecordType <|> parens parseType
+parseType = lexeme $ try parseArrowType <|> parseBaseType <|> parseRecordType <|> parseVariantType <|> parens parseType
 
 parseBool :: Parser Term
 parseBool = t <|> f <?> "bool"
@@ -116,6 +129,9 @@ parseLet = do
 parseRecordLabel :: Parser String
 parseRecordLabel = some (letterChar <|> numberChar)
 
+parseVariantLabel :: Parser String
+parseVariantLabel = some letterChar
+
 parseRecord :: Parser Term
 parseRecord =
   between
@@ -130,6 +146,39 @@ parseRecord =
       return (label, t)
     parseTupleElements = zip (map show [1 ..]) <$> sepBy parseTerm (symbol ",")
     parseRecordElements = sepBy parseRecordElement (symbol ",")
+
+parseVariant :: Parser Term
+parseVariant = do
+  (label, t) <- parseVariantNoAscription
+  void $ symbol "as"
+  ty <- parseType
+  return $ TmVariant t label ty
+  where
+    parseVariantElement = do
+      label <- parseVariantLabel
+      void $ symbol "="
+      t <- lexeme parseTerm
+      return (label, t)
+    parseVariantNoAscription = between (symbol "<") (symbol ">") parseVariantElement
+
+parseCase :: Parser Term
+parseCase = do
+  void $ symbol "case"
+  t <- lexeme parseNonApp
+  void $ symbol "of"
+  TmCase t . fromList <$> sepBy parseBranch (symbol ",")
+  where
+    parseBranch = do
+      void $ symbol "<"
+      label <- parseVariantLabel
+      void $ symbol "="
+      x <- parseVarName
+      void $ symbol ">"
+      void $ symbol "=>"
+      modify ((x, NameBind) :)
+      t <- parseTerm
+      modify tail
+      return (label, (x, t))
 
 parseSeq :: Parser Term
 parseSeq = do
@@ -157,6 +206,8 @@ parseNonApp = makeExprParser parsers operatorTable
         <|> parseAbs
         <|> parseLet
         <|> parseRecord
+        <|> parseVariant
+        <|> parseCase
         <|> try parseVar
         <|> parens parseTerm
 

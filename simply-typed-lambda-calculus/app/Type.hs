@@ -8,6 +8,7 @@ data Type
   | TyArrow Type Type
   | TyUnit
   | TyRecord (Map String Type)
+  | TyVariant (Map String Type)
   deriving (Eq, Ord)
 
 instance Show Type where
@@ -15,3 +16,4 @@ instance Show Type where
   show (TyArrow ty1 ty2) = show ty1 ++ "->" ++ show ty2
   show TyUnit = "Unit"
   show (TyRecord ts) = "{" ++ intercalate ", " (map (\(l, t) -> l ++ ":" ++ show t) $ toList ts) ++ "}"
+  show (TyVariant ts) = "<" ++ intercalate ", " (map (\(l, t) -> l ++ ":" ++ show t) $ toList ts) ++ ">"

@@ -14,6 +14,11 @@ data TypeError
   | TypeOfAscriptionMustMatch
   | ProjectionNotAppliedToATuple
   | InvalidProjection
+  | TypeOfVariantMustMatch
+  | MustHaveAscriptionOfVariantType
+  | CaseMustBeAppliedToVariant
+  | NonMatchingBranchesOfCaseWithVariantType
+  | CaseBranchesTypesMustMatchVariantType
   deriving (Eq, Show)
 
 data CompilerError = ParserError ParseError | TypecheckerError TypeError

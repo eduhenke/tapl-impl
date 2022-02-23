@@ -1,6 +1,7 @@
 module Typecheck where
 
-import Data.Map (member, (!))
+import Data.Map (elems, keys, member, (!))
+import qualified Data.Map
 import Error
 import Term
 import Type
@@ -49,6 +50,26 @@ typeOf ctx (TmProj t i) = case typeOf ctx t of
       then Right $ ts ! i
       else Left InvalidProjection
   _ -> Left ProjectionNotAppliedToATuple
+typeOf ctx (TmVariant t l varTy@(TyVariant tys)) = do
+  termTy <- typeOf ctx t
+  if termTy == tys ! l
+    then Right varTy
+    else Left TypeOfVariantMustMatch
+typeOf ctx (TmVariant {}) = Left MustHaveAscriptionOfVariantType
+typeOf ctx (TmCase t cases) = do
+  termTy <- typeOf ctx t
+  case termTy of
+    TyVariant varTys ->
+      if keys varTys /= keys cases
+        then Left NonMatchingBranchesOfCaseWithVariantType
+        else do
+          caseTysMap <- sequence $ Data.Map.mapWithKey (\l (x, t') -> typeOf ((x, VarBind (varTys ! l)) : ctx) t') cases
+          let caseTys = elems caseTysMap
+              ty = head caseTys
+          if all (== ty) caseTys
+            then Right ty
+            else Left CaseBranchesTypesMustMatchVariantType
+    _ -> Left CaseMustBeAppliedToVariant
 
 typeCheck :: Term -> Either CompilerError Type
 typeCheck term = case typeOf [] term of

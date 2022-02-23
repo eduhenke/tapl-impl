@@ -203,5 +203,25 @@ unitTests =
                 TyRecord . fromList $ [("a", TyBool)],
                 TmRecord . fromList $ [("a", TmTrue)]
               )
+          ),
+      testCase
+        "Variant expression"
+        $ assertEqual
+          []
+          (parse "<a=true> as <a:Bool,b:Bool>")
+          ( Right
+              ( TmVariant TmTrue "a" (TyVariant . fromList $ [("a", TyBool), ("b", TyBool)])
+              )
+          ),
+      testCase
+        "Case expression"
+        $ assertEqual
+          []
+          (compile "case <b=\\x:Unit.true> as <a:Bool,b:Unit->Bool> of <a=x> => x, <b=x> => x unit")
+          ( Right
+              ( TmCase (TmVariant (Abs "x" TyUnit TmTrue) "b" (TyVariant . fromList $ [("a", TyBool), ("b", TyArrow TyUnit TyBool)])) (fromList $ [("a", ("x", Var 0 1)), ("b", ("x", App (Var 0 1) TmUnit))]),
+                TyBool,
+                TmTrue
+              )
           )
     ]

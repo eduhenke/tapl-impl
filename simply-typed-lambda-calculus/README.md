@@ -14,6 +14,8 @@ t ::=
   let x=t in t
   {t_i}    // with i=1..n
   t.i
+  <l=t> as T
+  case t of <l_i=x_i> => t_i // with i=1..n
 
 v ::=
   \x:T.t   // abstraction value
@@ -29,7 +31,8 @@ T ::=
   Bool
   Unit
   T -> T
-  {T_i}    // with i=1..n
+  {T_i}     // with i=1..n
+  <l_i:T_i> // with i=1..n
 ```
 
 Derived forms:
