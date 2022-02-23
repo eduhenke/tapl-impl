@@ -4,29 +4,31 @@ import Data.List (find)
 import Data.Map (fromList, map, toList, (!))
 import Term
 
+termWalk :: Term -> (Int -> Int -> Int -> Term) -> Int -> Term
+termWalk t onVar c =
+  let walk c t = case t of
+        Var x n -> onVar c x n
+        TmIf cnd t f -> TmIf (walk c cnd) (walk c t) (walk c f)
+        Abs x ty t -> Abs x ty (walk (c + 1) t)
+        App t1 t2 -> App (walk c t1) (walk c t2)
+        TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
+        TmRecord ts -> TmRecord (Data.Map.map (walk c) ts)
+        t -> t
+   in walk c t
+
 shift :: Int -> Term -> Term
-shift =
-  let shift' c d (Var n l)
-        | n >= c = Var (n + d) (l + d)
-        | otherwise = Var n (l + d)
-      shift' c d (Abs x ty t) = Abs x ty $ shift' (c + 1) d t
-      shift' c d (App t1 t2) = App (shift' c d t1) (shift' c d t2)
-      shift' c d (TmIf cnd t f) = TmIf (shift' c d cnd) (shift' c d t) (shift' c d f)
-      shift' c d (TmLet x t1 t2) = TmLet x (shift' c d t1) (shift' (c + 1) d t2)
-      shift' c d (TmRecord ts) = TmRecord (Data.Map.map (shift' c d) ts)
-      shift' c d t = t
-   in shift' 0
+shift d t = termWalk t onVar 0
+  where
+    onVar c x n
+      | x >= c = Var (x + d) (n + d)
+      | otherwise = Var x (n + d)
 
 subst :: Term -> Int -> Term -> Term
-subst s j k@(Var n l)
-  | j == n = s
-  | otherwise = k
-subst s j (TmIf c t f) = TmIf (subst s j c) (subst s j t) (subst s j f)
-subst s j (Abs x ty t) = Abs x ty (subst (shift 1 s) (j + 1) t)
-subst s j (App t1 t2) = App (subst s j t1) (subst s j t2)
-subst s j (TmLet x t1 t2) = TmLet x (subst s j t1) (subst (shift 1 s) (j + 1) t2)
-subst s j (TmRecord ts) = TmRecord (Data.Map.map (subst s j) ts)
-subst s j t = t
+subst s j t = termWalk t onVar j
+  where
+    onVar c x n
+      | c == x = s
+      | otherwise = Var x n
 
 isVal :: Term -> Bool
 isVal TmTrue = True
