@@ -1,4 +1,7 @@
-let and=(\x:Bool.\y:Bool. if x then y else false) in
-let not=(\x:Bool. if x then false else true) in
-let or=(\x:Bool.\y:Bool. if x then true else y) in
-    and (not (or false true)) true
+(λw:(<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>).
+case w of
+  <monday=x>    => <tuesday=unit>   as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>),
+  <tuesday=x>   => <wednesday=unit> as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>),
+  <wednesday=x> => <thursday=unit>  as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>),
+  <thursday=x>  => <friday=unit>    as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>),
+  <friday=x>    => <monday=unit>    as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>)) (<tuesday=unit> as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>))

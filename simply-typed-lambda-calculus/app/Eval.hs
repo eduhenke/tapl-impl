@@ -15,6 +15,7 @@ termWalk t onVar c =
         TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
         TmRecord ts -> TmRecord (Data.Map.map (walk c) ts)
         TmCase t cases -> TmCase (walk c t) (Data.Map.map (second (walk (c + 1))) cases)
+        TmVariant t l ty -> TmVariant (walk c t) l ty
         t -> t
    in walk c t
 
@@ -38,6 +39,8 @@ isVal TmFalse = True
 isVal Abs {} = True
 isVal TmUnit = True
 isVal (TmRecord ts) = all isVal ts
+-- i've added variant as a value. this is not in the TaPL book
+isVal (TmVariant t _ _) = isVal t
 isVal _ = False
 
 betaReduction :: Term -> Term -> Term
@@ -92,9 +95,12 @@ eval' (TmCase t@(TmVariant v l ty) cases)
 eval' (TmCase t cases) =
   -- E-Case
   Just $ TmCase (eval t) cases
-eval' (TmVariant t l ty) =
-  -- E-Variant
-  Just $ TmVariant (eval t) l ty
+eval' (TmVariant t l ty)
+  -- i've added this rule, because i've treated a variant as a value. this is not in the TaPL book
+  | isVal t = Nothing
+  | otherwise =
+    -- E-Variant
+    Just $ TmVariant (eval t) l ty
 eval' _ = Nothing
 
 eval :: Term -> Term

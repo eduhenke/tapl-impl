@@ -13,10 +13,10 @@ compile input = (parse input >>= (\term -> (\ty -> (term, ty)) <$> typeCheck ter
 
 main :: IO ()
 main = do
-  void (putStrLn "enter term:")
-  code <- getLine
-  -- handle <- openFile "test.lambda" ReadMode
-  -- code <- hGetContents handle
+  -- void (putStrLn "enter term:")
+  -- code <- getLine
+  handle <- openFile "test.lambda" ReadMode
+  code <- hGetContents handle
   case compile code of
     Left e -> print e
     Right (term, ty) -> do
