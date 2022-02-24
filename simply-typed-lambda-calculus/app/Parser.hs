@@ -76,10 +76,11 @@ parseVariantType =
       return (label, t)
 
 parseBaseType :: Parser Type
-parseBaseType = bool <|> unit
+parseBaseType = bool <|> unit <|> nat
   where
     bool = TyBool <$ symbol "Bool"
     unit = TyUnit <$ symbol "Unit"
+    nat = TyNat <$ symbol "Nat"
 
 parseType :: Parser Type
 parseType = lexeme $ try parseArrowType <|> parseBaseType <|> parseRecordType <|> parseVariantType <|> parens parseType
@@ -122,7 +123,7 @@ parseLet = do
   t1 <- lexeme parseNonApp
   void $ symbol "in"
   modify ((varName, NameBind) :)
-  t2 <- parseTerm
+  t2 <- lexeme parseTerm
   modify tail
   return $ TmLet varName t1 t2
 
@@ -197,13 +198,16 @@ parseVar = do
   getDeBruijnIndex varName state
 
 parens :: Parser a -> Parser a
-parens = between (char '(') (char ')')
+parens = between (symbol "(") (char ')')
 
-parseZero, parseSucc, parsePred, parseIsZero :: Parser Term
+parseZero, parseNum, parseSucc, parsePred, parseIsZero :: Parser Term
 parseZero = TmZero <$ symbol "0"
+parseNum = do
+  n <- read <$> some numberChar
+  return $ iterate TmSucc TmZero !! n
 parseSucc = TmSucc <$> (symbol "succ" *> parseTerm)
 parsePred = TmPred <$> (symbol "pred" *> parseTerm)
-parseIsZero = TmIsZero <$> (symbol "zero?" *> parseTerm)
+parseIsZero = TmIsZero <$> ((symbol "zero?" <|> symbol "iszero") *> parseTerm)
 
 parseNonApp :: Parser Term
 parseNonApp = makeExprParser parsers operatorTable
@@ -212,7 +216,9 @@ parseNonApp = makeExprParser parsers operatorTable
       parseUnit
         <|> parseBool
         <|> parseIf
+        <|> try parseVar
         <|> parseZero
+        <|> parseNum
         <|> parseSucc
         <|> parsePred
         <|> parseIsZero
@@ -222,7 +228,6 @@ parseNonApp = makeExprParser parsers operatorTable
         <|> parseVariant
         <|> parseCase
         <|> parseFix
-        <|> try parseVar
         <|> parens parseTerm
 
 binary :: String -> (Term -> Term -> Term) -> Operator Parser Term
@@ -236,6 +241,7 @@ operatorTable =
       Postfix $ (\i t -> TmProj t i) <$> (symbol "." *> parseRecordLabel)
     ]
   ]
+
 
 parseTerm :: Parser Term
 parseTerm = chainl1 parseNonApp (App <$ space1)

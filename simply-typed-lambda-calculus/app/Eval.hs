@@ -10,6 +10,8 @@ termWalk t onVar c =
   let walk c t = case t of
         Var x n -> onVar c x n
         TmIf cnd t f -> TmIf (walk c cnd) (walk c t) (walk c f)
+        TmSucc t -> TmSucc (walk c t)
+        TmPred t -> TmPred (walk c t)
         TmIsZero t -> TmIsZero (walk c t)
         Abs x ty t -> Abs x ty (walk (c + 1) t)
         App t1 t2 -> App (walk c t1) (walk c t2)
@@ -17,6 +19,7 @@ termWalk t onVar c =
         TmRecord ts -> TmRecord (Data.Map.map (walk c) ts)
         TmCase t cases -> TmCase (walk c t) (Data.Map.map (second (walk (c + 1))) cases)
         TmVariant t l ty -> TmVariant (walk c t) l ty
+        TmFix t -> TmFix (walk c t)
         t -> t
    in walk c t
 

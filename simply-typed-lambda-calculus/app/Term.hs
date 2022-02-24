@@ -49,7 +49,7 @@ instance Show Term where
                 TmCase t cases -> "case " ++ show' ctx t ++ " of\n\t" ++ intercalate "\n\t" (map (\(l, (x, t)) -> "<" ++ l ++ "=" ++ x ++ "> => " ++ show' (x : ctx) t) $ toList cases)
                 TmFix t -> "fix " ++ show' ctx t
                 TmZero -> "0"
-                TmSucc t -> "succ(" ++ show' ctx t ++ ")"
-                TmPred t -> "pred(" ++ show' ctx t ++ ")"
+                TmSucc t -> show (1 + read (show' ctx t) :: Int)
+                TmPred t -> show (-1 + read (show' ctx t) :: Int)
                 TmIsZero t -> "zero? " ++ show' ctx t
      in show' [] t

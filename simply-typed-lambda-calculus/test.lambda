@@ -1,7 +1,12 @@
-(λw:(<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>).
-case w of
-  <monday=x>    => <tuesday=unit>   as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>),
-  <tuesday=x>   => <wednesday=unit> as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>),
-  <wednesday=x> => <thursday=unit>  as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>),
-  <thursday=x>  => <friday=unit>    as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>),
-  <friday=x>    => <monday=unit>    as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>)) (<tuesday=unit> as (<monday:Unit, tuesday:Unit, wednesday:Unit, thursday:Unit, friday:Unit>))
+let add=(fix
+  λa:Nat->Nat->Nat.
+    λn:Nat.λm:Nat.
+      if (iszero n) then m
+      else succ (a (pred n) m)) in
+let fib=(fix
+  λf:Nat->Nat.
+    λx:Nat.
+      if (iszero x) then 0
+      else if (iszero (pred x)) then (succ 0)
+      else add (f (pred x)) (f (pred (pred x)))) in
+fib 18

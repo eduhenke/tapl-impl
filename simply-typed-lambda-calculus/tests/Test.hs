@@ -254,5 +254,36 @@ unitTests =
                 TyBool,
                 TmTrue
               )
+          ),
+      testCase
+        "Fix with let and nat expression"
+        $ assertEqual
+          []
+          ( compile
+              "\
+              \let iseven=(fix (\
+              \    \\ie:Nat->Bool.\
+              \      \\x:Nat.\
+              \         if (iszero x) then true\
+              \         else (if (iszero (pred x))\
+              \         then false else ie (pred (pred x)))))\
+              \in iseven (succ succ 0)"
+          )
+          ( Right
+              ( TmLet
+                  "iseven"
+                  ( TmFix $
+                      Abs "ie" (TyArrow TyNat TyBool) $
+                        Abs "x" TyNat $
+                          TmIf (TmIsZero (Var 0 2)) TmTrue $
+                            TmIf
+                              (TmIsZero (TmPred (Var 0 2)))
+                              TmFalse
+                              (App (Var 1 2) (TmPred (TmPred (Var 0 2))))
+                  )
+                  (App (Var 0 1) (TmSucc (TmSucc TmZero))),
+                TyBool,
+                TmTrue
+              )
           )
     ]
