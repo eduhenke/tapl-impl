@@ -4,7 +4,11 @@ import Data.List
 import Data.Map (Map, toList)
 import Type
 
-data Binding = NameBind | VarBind Type deriving (Eq, Ord, Show)
+data Binding
+  = NameBind
+  | VarBind Type
+  | TyAbbreviation Type
+  deriving (Eq, Ord, Show)
 
 type Context = [(String, Binding)]
 

@@ -82,8 +82,26 @@ parseBaseType = bool <|> unit <|> nat
     unit = TyUnit <$ symbol "Unit"
     nat = TyNat <$ symbol "Nat"
 
+isTypeAbbreviation = (\(_, b) -> case b of TyAbbreviation _ -> True; _ -> False)
+
+parseTypeAbbreviationUse :: Parser Type
+parseTypeAbbreviationUse = do
+  n <- parseVarName
+  state <- get
+  (_, TyAbbreviation ty) <- case elemIndex n (map fst $ filter isTypeAbbreviation state) of
+    Nothing -> fail $ "The type " ++ n ++ " has not been bound"
+    Just i -> pure $ (filter isTypeAbbreviation state) !! i
+  return ty
+
 parseType :: Parser Type
-parseType = lexeme $ try parseArrowType <|> parseBaseType <|> parseRecordType <|> parseVariantType <|> parens parseType
+parseType =
+  lexeme $
+    try parseArrowType
+      <|> parseBaseType
+      <|> parseRecordType
+      <|> parseVariantType
+      <|> parseTypeAbbreviationUse
+      <|> parens parseType
 
 parseBool :: Parser Term
 parseBool = t <|> f <?> "bool"
@@ -209,6 +227,16 @@ parseSucc = TmSucc <$> (symbol "succ" *> parseTerm)
 parsePred = TmPred <$> (symbol "pred" *> parseTerm)
 parseIsZero = TmIsZero <$> ((symbol "zero?" <|> symbol "iszero") *> parseTerm)
 
+parseTypeAbbreviation :: Parser Term
+parseTypeAbbreviation = do
+  void $ symbol "type"
+  n <- lexeme parseVarName
+  void $ symbol "="
+  ty <- lexeme parseType
+  void $ symbol ";"
+  modify ((n, TyAbbreviation ty) :)
+  parseTerm
+
 parseNonApp :: Parser Term
 parseNonApp = makeExprParser parsers operatorTable
   where
@@ -228,6 +256,7 @@ parseNonApp = makeExprParser parsers operatorTable
         <|> parseVariant
         <|> parseCase
         <|> parseFix
+        <|> parseTypeAbbreviation
         <|> parens parseTerm
 
 binary :: String -> (Term -> Term -> Term) -> Operator Parser Term
@@ -241,7 +270,6 @@ operatorTable =
       Postfix $ (\i t -> TmProj t i) <$> (symbol "." *> parseRecordLabel)
     ]
   ]
-
 
 parseTerm :: Parser Term
 parseTerm = chainl1 parseNonApp (App <$ space1)

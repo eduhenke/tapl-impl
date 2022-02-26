@@ -17,6 +17,7 @@ termWalk t onVar c =
         App t1 t2 -> App (walk c t1) (walk c t2)
         TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
         TmRecord ts -> TmRecord (Data.Map.map (walk c) ts)
+        TmProj t prop -> TmProj (walk c t) prop
         TmCase t cases -> TmCase (walk c t) (Data.Map.map (second (walk (c + 1))) cases)
         TmVariant t l ty -> TmVariant (walk c t) l ty
         TmFix t -> TmFix (walk c t)
