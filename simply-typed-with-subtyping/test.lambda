@@ -1,1 +1,6 @@
-(λr:{x:Nat}. r.x) {x=5}
+type User={user:{profile:{age:Nat}}};
+let getUserAge=(
+  λr:User.
+    ((r.user).profile).age)
+in
+  getUserAge {user={profile={id=123, age=23}, otherData=unit}, otherData=unit}

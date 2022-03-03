@@ -285,5 +285,14 @@ unitTests =
                 TyBool,
                 TmTrue
               )
+          ),
+      testCase
+        "Record subtyping"
+        $ assertEqual
+          []
+          ( subtype
+              (TyRecord $ fromList [("user", TyRecord $ fromList [("profile", TyRecord $ fromList [("age", TyNat), ("id", TyNat)]), ("other", TyUnit)]), ("valid", TyBool)])
+              (TyRecord $ fromList [("user", TyRecord $ fromList [("profile", TyRecord $ fromList [("age", TyNat)])])])
           )
+          True
     ]

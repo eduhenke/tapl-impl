@@ -10,6 +10,7 @@ data Type
   | TyUnit
   | TyRecord (Map String Type)
   | TyVariant (Map String Type)
+  | TyTop
   deriving (Eq, Ord)
 
 instance Show Type where
@@ -19,3 +20,4 @@ instance Show Type where
   show TyUnit = "Unit"
   show (TyRecord ts) = "{" ++ intercalate ", " (map (\(l, t) -> l ++ ":" ++ show t) $ toList ts) ++ "}"
   show (TyVariant ts) = "<" ++ intercalate ", " (map (\(l, t) -> l ++ ":" ++ show t) $ toList ts) ++ ">"
+  show TyTop = "Top"

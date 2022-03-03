@@ -1,10 +1,25 @@
 module Typecheck where
 
-import Data.Map (elems, keys, member, (!))
+import Data.Map (elems, foldrWithKey, keys, keysSet, member, (!))
 import qualified Data.Map
+import Data.Set (isSubsetOf)
 import Error
 import Term
 import Type
+
+subtype :: Type -> Type -> Bool
+subtype t1 t2 | t1 == t2 = True
+subtype t1 TyTop = True
+subtype (TyArrow s1 s2) (TyArrow t1 t2) = subtype t1 s1 && subtype s2 t2
+subtype (TyRecord k) (TyRecord l) =
+  if keysSet l `isSubsetOf` keysSet k
+    then foldrWithKey f True l
+    else False
+  where
+    f label tyT acc =
+      Just True == do
+        tyS <- Data.Map.lookup label k
+        Just $ acc && subtype tyS tyT
 
 typeOf :: Context -> Term -> Either TypeError Type
 typeOf _ TmFalse = Right TyBool
@@ -32,16 +47,15 @@ typeOf ctx (TmIsZero t)
 typeOf ctx (Var n _) =
   let (_, VarBind ty) = (ctx !! n)
    in Right ty
-typeOf ctx (App t1 t2) =
+typeOf ctx (App t1 t2) = do
+  ty1 <- typeOf ctx t1
+  ty2 <- typeOf ctx t2
   case ty1 of
-    Right (TyArrow tyArg tyBody) ->
-      if Right tyArg == ty2
+    (TyArrow tyArg tyBody) ->
+      if subtype ty2 tyArg
         then Right tyBody
         else Left TypeAppArgumentMustMatch
     _ -> Left TypeArrowExpected
-  where
-    ty1 = typeOf ctx t1
-    ty2 = typeOf ctx t2
 typeOf ctx (Abs arg tyArg body) = do
   tyBody <- typeOf ((arg, VarBind tyArg) : ctx) body
   return $ TyArrow tyArg tyBody
