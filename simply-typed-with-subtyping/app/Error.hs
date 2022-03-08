@@ -7,13 +7,13 @@ type ParseError = ParseErrorBundle String Void
 
 data TypeError
   = TypeOfConditionMustBeBool
-  | TypeOfArmsMustMatch
+  | TypeOfArmsMustJoin
   | TypeMustBeNat
   | TypeOfVarNotSpecified
   | TypeArrowExpected
   | TypeAppArgumentMustMatch
   | TypeOfAscriptionMustMatch
-  | ProjectionNotAppliedToATuple
+  | ProjectionNotAppliedToARecord
   | InvalidProjection
   | TypeOfVariantMustMatch
   | MustHaveAscriptionOfVariantType

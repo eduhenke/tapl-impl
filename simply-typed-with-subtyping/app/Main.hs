@@ -13,7 +13,7 @@ compile input = (parse input >>= (\term -> (\ty -> (term, ty)) <$> typeCheck ter
 
 main :: IO ()
 main = do
-  -- void (putStrLn "enter term:")
+  void (putStrLn "compiling...")
   -- code <- getLine
   handle <- openFile "test.lambda" ReadMode
   code <- hGetContents handle

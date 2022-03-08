@@ -2,6 +2,8 @@ module Term where
 
 import Data.List
 import Data.Map (Map, toList)
+import Data.Maybe (fromMaybe)
+import Text.Read (readMaybe)
 import Type
 
 data Binding
@@ -47,13 +49,13 @@ instance Show Term where
                 TmUnit -> "unit"
                 TmAscription t ty -> s t ++ " as " ++ show ty
                 TmLet x t1 t2 -> "let " ++ x ++ "=" ++ s t1 ++ " in " ++ show' (x : ctx) t2
-                TmProj t i -> show' ctx t ++ "." ++ show i
-                TmRecord ts -> "{" ++ intercalate ", " (map (\(l, t) -> l ++ "=" ++ show' ctx t) $ toList ts) ++ "}"
-                TmVariant t l ty -> "<" ++ l ++ "=" ++ show' ctx t ++ "> as " ++ show ty
-                TmCase t cases -> "case " ++ show' ctx t ++ " of\n\t" ++ intercalate "\n\t" (map (\(l, (x, t)) -> "<" ++ l ++ "=" ++ x ++ "> => " ++ show' (x : ctx) t) $ toList cases)
-                TmFix t -> "fix " ++ show' ctx t
+                TmProj t i -> s t ++ "." ++ i
+                TmRecord ts -> "{" ++ intercalate ", " (map (\(l, t) -> l ++ "=" ++ s t) $ toList ts) ++ "}"
+                TmVariant t l ty -> "<" ++ l ++ "=" ++ s t ++ "> as " ++ show ty
+                TmCase t cases -> "case " ++ s t ++ " of\n\t" ++ intercalate "\n\t" (map (\(l, (x, t)) -> "<" ++ l ++ "=" ++ x ++ "> => " ++ show' (x : ctx) t) $ toList cases)
+                TmFix t -> "fix " ++ s t
                 TmZero -> "0"
-                TmSucc t -> show (1 + read (show' ctx t) :: Int)
-                TmPred t -> show (-1 + read (show' ctx t) :: Int)
-                TmIsZero t -> "zero? " ++ show' ctx t
+                TmSucc t -> (\x -> maybe ("succ " ++ x) (show . (1 +)) (readMaybe x :: Maybe Int)) (s t)
+                TmPred t -> (\x -> maybe ("pred " ++ x) (show . (1 -)) (readMaybe x :: Maybe Int)) (s t)
+                TmIsZero t -> "zero? " ++ s t
      in show' [] t

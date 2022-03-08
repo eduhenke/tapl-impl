@@ -1,0 +1,21 @@
+type B={b:Nat};
+type AB={a:Nat,b:Nat};
+type ABC={a:Nat,b:Nat,c:Nat};
+
+let rec={a=1, b=123}
+in let applyfntwice=(\x:AB->AB. x (x rec))          // AB->AB->AB
+in let f_ab_ab=(\x:AB .{a=x.a, b=succ x.b})          // AB->AB typechecks
+
+// altering the image type(covariance)
+in let f_ab_abc=(\x:AB . {a=x.a, b=succ x.b, c=x.a}) // AB->ABC typechecks (AB->ABC is a subtype of AB->AB)
+in let f_ab_b=(\x:AB . {b=succ x.b})                 // AB->B does NOT typecheck (AB->B is NOT a subtype of AB->AB)
+
+// altering the domain type(contravariance)
+in let f_b_ab=(\x:B . {a=0, b=succ x.b})             // B->AB typechecks (B->AB is a subtype of AB->AB)
+in let f_abc_ab=(\x:ABC . {a=x.a, b=succ x.b})       // ABC->AB does NOT typecheck  (ABC->AB is NOT a subtype of AB->AB)
+
+// altering both
+in let f_b_abc=(\x:B . {a=x.b, b=succ x.b, c=3})     // B->ABC typechecks (B->ABC is a subtype of AB->AB)
+
+in
+  applyfntwice f_b_abc

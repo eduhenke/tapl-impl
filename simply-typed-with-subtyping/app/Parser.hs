@@ -1,6 +1,6 @@
 module Parser where
 
-import Control.Monad.Combinators.Expr (Operator (InfixL, Postfix), makeExprParser)
+import Control.Monad.Combinators.Expr (Operator (InfixL, InfixR, Postfix), makeExprParser)
 import Control.Monad.Identity (Identity)
 import Control.Monad.State
 import Data.Functor (void)
@@ -38,14 +38,7 @@ getDeBruijnIndex v ctx = case elemIndex v (map fst ctx) of
   Just n -> pure $ Var n (length ctx)
 
 parseVarName :: Parser String
-parseVarName = some letterChar
-
-parseArrowType :: Parser Type
-parseArrowType = do
-  ty1 <- parseBaseType
-  void $ symbol "->"
-  ty2 <- parseType
-  return $ TyArrow ty1 ty2
+parseVarName = some (letterChar <|> char '_')
 
 parseRecordType :: Parser Type
 parseRecordType =
@@ -95,13 +88,16 @@ parseTypeAbbreviationUse = do
 
 parseType :: Parser Type
 parseType =
-  lexeme $
-    try parseArrowType
-      <|> parseBaseType
-      <|> parseRecordType
-      <|> parseVariantType
-      <|> parseTypeAbbreviationUse
-      <|> parens parseType
+  makeExprParser
+    ( lexeme $
+        parseBaseType
+          <|> parseRecordType
+          <|> parseVariantType
+          <|> parseTypeAbbreviationUse
+          <|> parens parseType
+    )
+    [ [binaryR "->" TyArrow]
+    ]
 
 parseBool :: Parser Term
 parseBool = t <|> f <?> "bool"
@@ -259,12 +255,13 @@ parseNonApp = makeExprParser parsers operatorTable
         <|> parseTypeAbbreviation
         <|> parens parseTerm
 
-binary :: String -> (Term -> Term -> Term) -> Operator Parser Term
-binary name f = InfixL (f <$ string name)
+binaryL, binaryR :: String -> (a -> a -> a) -> Operator Parser a
+binaryL name f = InfixL (f <$ symbol name)
+binaryR name f = InfixR (f <$ symbol name)
 
 operatorTable :: [[Operator Parser Term]]
 operatorTable =
-  [ [ binary ";" $ \t1 t2 -> App (Abs "_" TyUnit t2) t1
+  [ [ binaryL ";" $ \t1 t2 -> App (Abs "_" TyUnit t2) t1
     ],
     [ Postfix $ (\ty term -> TmAscription term ty) <$> (symbol " as" *> parseType),
       Postfix $ (\i t -> TmProj t i) <$> (symbol "." *> parseRecordLabel)

@@ -41,6 +41,7 @@ subst s j t = termWalk t onVar j
 isNumVal :: Term -> Bool
 isNumVal TmZero = True
 isNumVal (TmSucc t) = isNumVal t
+isNumVal _ = False
 
 isVal :: Term -> Bool
 isVal TmTrue = True

@@ -1,11 +1,43 @@
 module Typecheck where
 
-import Data.Map (elems, foldrWithKey, keys, keysSet, member, (!))
-import qualified Data.Map
+import qualified Control.Monad as Monad
+import Data.Map (assocs, elems, foldrWithKey, keys, keysSet, member, (!))
+import qualified Data.Map as M
 import Data.Set (isSubsetOf)
+import qualified Data.Set as S
 import Error
 import Term
 import Type
+
+-- calculates the least "common" supertype of both types
+join :: Type -> Type -> Type
+join t1 t2 | t1 == t2 = t1
+join (TyArrow s1 s2) (TyArrow t1 t2)
+  | Just m <- meet s1 t1 =
+    TyArrow m (join s2 t2)
+join (TyRecord m1) (TyRecord m2) =
+  TyRecord $ M.intersectionWith join m1 m2
+
+-- join _ _ = TyTop
+
+-- calculates the highest "common" subtype of both types
+meet :: Type -> Type -> Maybe Type
+meet t1 t2 | t1 == t2 = pure t1
+meet s TyTop = pure s
+meet TyTop t = pure t
+meet (TyArrow s1 s2) (TyArrow t1 t2)
+  | Just m <- meet s2 t2 =
+    pure $ TyArrow (join s1 t1) m
+meet (TyRecord m1) (TyRecord m2) =
+  if length mapOfMaybeMeets == length mapOfMeets
+    then pure $ TyRecord mapOfMeets
+    else Nothing
+  where
+    mapOfMaybeMeets = M.unionWith meet' (M.map Just m1) (M.map Just m2)
+    meet' :: Maybe Type -> Maybe Type -> Maybe Type
+    meet' k1 k2 = Monad.join $ meet <$> k1 <*> k2
+    mapOfMeets = M.mapMaybe id mapOfMaybeMeets
+meet _ _ = Nothing
 
 subtype :: Type -> Type -> Bool
 subtype t1 t2 | t1 == t2 = True
@@ -18,8 +50,9 @@ subtype (TyRecord k) (TyRecord l) =
   where
     f label tyT acc =
       Just True == do
-        tyS <- Data.Map.lookup label k
+        tyS <- M.lookup label k
         Just $ acc && subtype tyS tyT
+subtype _ _ = False
 
 typeOf :: Context -> Term -> Either TypeError Type
 typeOf _ TmFalse = Right TyBool
@@ -28,16 +61,16 @@ typeOf _ TmZero = Right TyNat
 typeOf _ TmUnit = Right TyUnit
 typeOf ctx (TmIf c t f) =
   if typeOf ctx c == Right TyBool
-    then
-      let tyT = typeOf ctx t
-          tyF = typeOf ctx f
-       in if tyT == tyF
-            then tyT
-            else Left TypeOfArmsMustMatch
+    then do
+      tyT <- typeOf ctx t
+      tyF <- typeOf ctx f
+      pure $ tyT `join` tyF
     else Left TypeOfConditionMustBeBool
-typeOf ctx (TmSucc t)
-  | typeOf ctx t == Right TyNat = Right TyNat
-  | otherwise = Left TypeMustBeNat
+typeOf ctx (TmSucc t) = do
+  ty <- typeOf ctx t
+  if ty == TyNat
+    then pure TyNat
+    else Left TypeMustBeNat
 typeOf ctx (TmPred t)
   | typeOf ctx t == Right TyNat = Right TyNat
   | otherwise = Left TypeMustBeNat
@@ -73,7 +106,7 @@ typeOf ctx (TmProj t i) = case typeOf ctx t of
     if member i ts
       then Right $ ts ! i
       else Left InvalidProjection
-  _ -> Left ProjectionNotAppliedToATuple
+  _ -> Left ProjectionNotAppliedToARecord
 typeOf ctx (TmVariant t l varTy@(TyVariant tys)) = do
   termTy <- typeOf ctx t
   if termTy == tys ! l
@@ -87,7 +120,7 @@ typeOf ctx (TmCase t cases) = do
       if keys varTys /= keys cases
         then Left NonMatchingBranchesOfCaseWithVariantType
         else do
-          caseTysMap <- sequence $ Data.Map.mapWithKey (\l (x, t') -> typeOf ((x, VarBind (varTys ! l)) : ctx) t') cases
+          caseTysMap <- sequence $ M.mapWithKey (\l (x, t') -> typeOf ((x, VarBind (varTys ! l)) : ctx) t') cases
           let caseTys = elems caseTysMap
               ty = head caseTys
           if all (== ty) caseTys
