@@ -1,0 +1,28 @@
+type NatList=µX.<nil:Unit, cons:{Nat, X}>;
+type NLBody=<nil:Unit, cons:{Nat, NatList}>;
+let add=(fix
+  λa:Nat->Nat->Nat.
+    λn:Nat.λm:Nat.
+      if (iszero n) then m
+      else succ (a (pred n) m)) in
+let nil=(fold [NatList] <nil=unit> as NLBody) in
+let cons=(λn:Nat.λl:NatList.fold [NatList] <cons={n, l}> as NLBody) in
+let isnil=(λl:NatList.
+  case (unfold [NatList] l) of
+    <nil=x> => true,
+    <cons=t> => false) in
+let head=(λl:NatList.
+  case (unfold [NatList] l) of
+    <nil=x> => 0,
+    <cons=t> => t.1) in
+let tail=(λl:NatList.
+  case (unfold [NatList] l) of
+    <nil=x> => l,
+    <cons=t> => t.2) in
+let reduce=(\default:Nat.\combine:Nat->Nat->Nat. (fix \f:NatList->Nat.\x:NatList.case (unfold [NatList] x) of
+  <nil=x> => default,
+  <cons=x> => combine x.1 (f x.2))) in
+let sum=((reduce 0) add) in
+let list=(cons 2 (cons 4 (cons 3 nil))) in
+
+sum list

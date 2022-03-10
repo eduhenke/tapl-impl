@@ -1,0 +1,6 @@
+type Hungry=µX.Nat->X;
+type Stream=µA.Unit->{Nat, A};
+let hd=(\s:Stream. ((unfold [Stream] s) unit).1) in
+let tl=(\s:Stream. ((unfold [Stream] s) unit).2) in
+let repeat=((fix \f:Nat->Stream. \n:Nat. fold [Stream] (\_:Unit.{n, (f (succ n))})) 0) in
+hd (tl (tl repeat))

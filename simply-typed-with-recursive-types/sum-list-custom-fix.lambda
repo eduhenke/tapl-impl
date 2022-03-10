@@ -1,0 +1,41 @@
+type NatList=µX.<nil:Unit, cons:{Nat, X}>;
+type NLBody=<nil:Unit, cons:{Nat, NatList}>;
+type TFNat=Nat->Nat->Nat;
+type D=µA.A->TFNat;
+type TFNatlist=NatList->Nat;
+type E=µA.A->TFNatlist;
+// this is actually a Z-combinator, because we are using a strict evaluation strategy
+let fixBinNat=(
+  \f:TFNat->TFNat.
+    (λx:D. f (λv:Nat.(((unfold [D] x) x) v)))
+    (fold [D] (λx:D. f (λv:Nat.((unfold [D] x) x) v)))) in
+let fixNatList=(
+  \f:TFNatlist->TFNatlist.
+    (λx:E. f (λv:NatList.(((unfold [E] x) x) v)))
+    (fold [E] (λx:E. f (λv:NatList.((unfold [E] x) x) v)))) in
+let add=(fixBinNat
+  λadd:Nat->Nat->Nat.
+  λn:Nat.λm:Nat.
+    if (iszero n)
+      then m
+      else succ (add (pred n) m)) in
+let nil=(fold [NatList] <nil=unit> as NLBody) in
+let cons=(λn:Nat.λl:NatList.fold [NatList] <cons={n, l}> as NLBody) in
+let isnil=(λl:NatList.
+  case (unfold [NatList] l) of
+    <nil=x> => true,
+    <cons=t> => false) in
+let head=(λl:NatList.
+  case (unfold [NatList] l) of
+    <nil=x> => 0,
+    <cons=t> => t.1) in
+let tail=(λl:NatList.
+  case (unfold [NatList] l) of
+    <nil=x> => l,
+    <cons=t> => t.2) in
+let reduce=((fixNatList \f:NatList->Nat.\x:NatList.case (unfold [NatList] x) of
+  <nil=x> => 0,
+  <cons=x> => add x.1 (f x.2))) in
+let sum=reduce in
+let list=(cons 4 (cons 3 nil)) in
+sum list
