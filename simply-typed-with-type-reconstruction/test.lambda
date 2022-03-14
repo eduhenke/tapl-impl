@@ -1,0 +1,6 @@
+let test=(
+  λx:Nat.
+    if (iszero x) then 0
+    else if (iszero (pred x)) then (succ 0)
+    else x) in
+test 1
