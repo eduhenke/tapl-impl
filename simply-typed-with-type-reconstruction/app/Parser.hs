@@ -41,11 +41,11 @@ parseVarName :: Parser String
 parseVarName = some (letterChar <|> char '_')
 
 parseBaseType :: Parser Type
-parseBaseType = bool <|> unit <|> nat
+parseBaseType = bool <|> nat <|> unknown
   where
     bool = TyBool <$ symbol "Bool"
-    unit = TyUnit <$ symbol "Unit"
     nat = TyNat <$ symbol "Nat"
+    unknown = TyVar <$> parseTypeVarName
 
 parseTypeAbbreviationUse :: Parser Type
 parseTypeAbbreviationUse = do
@@ -55,9 +55,7 @@ parseTypeAbbreviationUse = do
   (_, TyAbbreviation ty) <- case elemIndex n (map fst tyAbbrs) of
     Nothing -> fail $ "The type " ++ n ++ " has not been bound"
     Just i -> pure $ tyAbbrs !! i
-  -- in case we are using an abbreviation inside of a recursive type
-  let scopeLength = length $ filter (\(_, bind) -> case bind of TyVarBind -> True; _ -> False) state
-  return $ shift scopeLength ty
+  return $ ty
 
 parseTypeVarName :: Parser String
 parseTypeVarName = parseVarName
@@ -92,9 +90,12 @@ parseAbs :: Parser Term
 parseAbs = do
   void (symbol "λ" <|> symbol "\\")
   varName <- lexeme parseVarName
-  void $ symbol ":"
-  ty <- parseType
-  modify ((varName, VarBind ty) :)
+  ty <- optional . try $ do
+    void $ symbol ":"
+    parseType
+  case ty of
+    Just ty -> modify ((varName, VarBind ty) :)
+    Nothing -> modify ((varName, NameBind) :)
   void $ symbol "."
   term <- parseTerm
   modify tail
@@ -117,13 +118,6 @@ parseRecordLabel = some (letterChar <|> numberChar)
 
 parseVariantLabel :: Parser String
 parseVariantLabel = some letterChar
-
-parseSeq :: Parser Term
-parseSeq = do
-  t1 <- parseNonApp
-  void (symbol ";")
-  t2 <- parseNonApp
-  return $ App (Abs "_" TyUnit t2) t1
 
 parseVar :: Parser Term
 parseVar = do
@@ -154,31 +148,23 @@ parseTypeAbbreviation = do
   parseTerm
 
 parseNonApp :: Parser Term
-parseNonApp = makeExprParser parsers operatorTable
-  where
-    parsers =
-      parseBool
-        <|> parseIf
-        <|> try parseVar
-        <|> parseZero
-        <|> parseNum
-        <|> parseSucc
-        <|> parsePred
-        <|> parseIsZero
-        <|> parseAbs
-        <|> parseLet
-        <|> parseTypeAbbreviation
-        <|> parens parseTerm
+parseNonApp =
+  parseBool
+    <|> parseIf
+    <|> try parseVar
+    <|> parseZero
+    <|> parseNum
+    <|> parseSucc
+    <|> parsePred
+    <|> parseIsZero
+    <|> parseAbs
+    <|> parseLet
+    <|> parseTypeAbbreviation
+    <|> parens parseTerm
 
 binaryL, binaryR :: String -> (a -> a -> a) -> Operator Parser a
 binaryL name f = InfixL (f <$ symbol name)
 binaryR name f = InfixR (f <$ symbol name)
-
-operatorTable :: [[Operator Parser Term]]
-operatorTable =
-  [ [ binaryL ";" $ \t1 t2 -> App (Abs "_" TyUnit t2) t1
-    ]
-  ]
 
 parseTerm :: Parser Term
 parseTerm = chainl1 parseNonApp (App <$ space1)
