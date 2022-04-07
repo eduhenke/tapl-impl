@@ -1,0 +1,3 @@
+let double=(λX. λf:X->X. λa:X. f (f a)) in
+let quadruple=(λY. (double [Y->Y]) (double [Y])) in
+(quadruple [Nat]) (\n:Nat. succ n) 5
