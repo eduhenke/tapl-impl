@@ -6,6 +6,7 @@ import Control.Monad.State
 import Data.Functor (void)
 import Data.List (elemIndex)
 import Data.Map (fromList)
+import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import Data.Void
 import Error
@@ -33,11 +34,12 @@ symbol :: String -> Parser String
 symbol = L.symbol sc
 
 getDeBruijnIndex :: String -> Context -> Parser Term
-getDeBruijnIndex v ctx = case elemIndex v (map fst ctx') of
+getDeBruijnIndex v ctx = case elemIndex v (map fst ctx) of
   Nothing -> fail $ "The variable " ++ v ++ " has not been bound"
-  Just n -> pure $ Var n (length ctx')
-  where
-    ctx' = filter (\(_, b) -> case b of NameBind -> True; VarBind _ -> True; _ -> False) ctx
+  Just n -> case ctx !! n of
+    (_, NameBind) -> pure $ Var n (length ctx)
+    (_, VarBind _) -> pure $ Var n (length ctx)
+    _ -> fail $ "The variable " ++ v ++ " is not binded to a name"
 
 parseVarName :: Parser String
 parseVarName = some (lowerChar <|> char '_')
@@ -47,15 +49,16 @@ parseBaseType = bool <|> nat <|> var
   where
     bool = TyBool <$ symbol "Bool"
     nat = TyNat <$ symbol "Nat"
-    var = parseTypeVar
+    var = try parseTypeVar
 
 parseTypeVar = do
   x <- parseTypeVarName
   state <- get
-  let tyVars = filter (\(_, bind) -> case bind of TyVarBind -> True; _ -> False) state
-  case elemIndex x (map fst tyVars) of
+  case elemIndex x (map fst state) of
     Nothing -> fail $ "The type variable" ++ x ++ " has not been bound"
-    Just i -> pure $ TyVar i (length tyVars)
+    Just i -> case state !! i of
+      (_, TyVarBind _) -> pure $ TyVar i (length state)
+      _ -> fail $ "The variable" ++ x ++ " is not binded to a type variable"
 
 parseTypeAbbreviationUse :: Parser Type
 parseTypeAbbreviationUse = do
@@ -89,18 +92,19 @@ parseTypeAll :: Parser Type
 parseTypeAll = do
   void $ symbol "∀"
   tyName <- parseTypeVarName
-  modify ((tyName, TyVarBind) :)
+  tyT1 <- fromMaybe TyTop <$> optional (symbol "<:" *> parseType)
+  modify ((tyName, TyVarBind tyT1) :)
   void $ symbol "."
   ty <- parseType
   modify tail
-  return $ TyAll tyName ty
+  return $ TyAll tyName tyT1 ty
 
 parseType :: Parser Type
 parseType =
   makeExprParser
     ( lexeme $
         try parseTypeAbbreviationUse
-          <|> try parseBaseType
+          <|> parseBaseType
           <|> parseRecordType
           <|> parseTypeAll
           <|> parens parseType
@@ -139,11 +143,12 @@ parseTermTypeAbs :: Parser Term
 parseTermTypeAbs = do
   void (symbol "λ" <|> symbol "\\")
   tyName <- lexeme parseTypeVarName
-  modify ((tyName, TyVarBind) :)
+  tyT1 <- fromMaybe TyTop <$> optional (symbol "<:" *> parseType)
+  modify ((tyName, TyVarBind tyT1) :)
   void $ symbol "."
   term <- parseTerm
   modify tail
-  return $ TmTyAbs tyName term
+  return $ TmTyAbs tyName tyT1 term
 
 parseLet :: Parser Term
 parseLet = do
@@ -219,7 +224,7 @@ parseNonApp = makeExprParser parsers operatorTable
         <|> parsePred
         <|> parseIsZero
         <|> try parseTermTypeAbs
-        <|> parseAbs
+        <|> try parseAbs
         <|> parseLet
         <|> parseRecord
         <|> parseTypeAbbreviation

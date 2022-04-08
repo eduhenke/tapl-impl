@@ -2,6 +2,7 @@ module Error where
 
 import Data.Void (Void)
 import Text.Megaparsec (ParseErrorBundle)
+import Type (Type)
 
 type ParseError = ParseErrorBundle String Void
 
@@ -12,8 +13,9 @@ data TypeError
   | TypeOfVarNotSpecified
   | TypeOfArmsMustMatch
   | TypeArrowExpected
-  | TypeAppArgumentMustMatch
+  | TypeAppArgumentMustMatch Type Type
   | TypeTyAppMustApplyToForallType
+  | TypeTyAppMustFollowTypeConstraints
   | InvalidProjection
   | ProjectionNotAppliedToATuple
   deriving (Eq, Show)

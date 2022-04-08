@@ -20,7 +20,7 @@ termWalk t onVar onType c =
         TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
         TmRecord ts -> TmRecord (Data.Map.map (walk c) ts)
         TmProj t prop -> TmProj (walk c t) prop
-        TmTyAbs x t -> TmTyAbs x (walk c t)
+        TmTyAbs x tyT1 t -> TmTyAbs x (onType c tyT1) (walk c t)
         TmTyApp t ty -> TmTyApp (walk c t) (onType c ty)
         t -> t
    in walk c t
@@ -31,7 +31,7 @@ shift d t = termWalk t onVar onType 0
     onVar c x n
       | x >= c = Var (x + d) (n + d)
       | otherwise = Var x (n + d)
-    onType c = T.tyShift d
+    onType c = Type.tyShift d
 
 subst :: Term -> Int -> Term -> Term
 subst s j t = termWalk t onVar onType j
@@ -45,7 +45,7 @@ substTy :: String -> Term -> Type -> Term
 substTy x t ty = termWalk t onVar onType 0
   where
     onVar c = Var
-    onType c ty' = T.tySubstTop ty' ty
+    onType c ty' = Type.tySubstTop ty' ty
 
 isNumVal :: Term -> Bool
 isNumVal TmZero = True
@@ -59,7 +59,7 @@ isVal TmZero = isNumVal TmZero
 isVal (TmSucc t) = isNumVal t
 isVal Abs {} = True
 isVal (TmRecord ts) = all isVal ts
-isVal (TmTyAbs _ _) = True
+isVal (TmTyAbs {}) = True
 isVal _ = False
 
 betaReduction :: Term -> Term -> Term
@@ -105,7 +105,7 @@ eval' t@(TmRecord ts)
     evalFirstNonVal ((label, t) : ts)
       | isVal t = (label, t) : evalFirstNonVal ts
       | otherwise = (label, eval t) : ts
-eval' (TmTyApp (TmTyAbs x body) argTy) = return $ substTy x body argTy
+eval' (TmTyApp (TmTyAbs x tyT1 body) argTy) = return $ substTy x body argTy
 eval' (TmTyApp t ty) = (`TmTyApp` ty) <$> eval' t
 eval' _ = Nothing
 

@@ -28,6 +28,7 @@ Types:
 T ::=
   Bool
   Nat
+  Top
   T -> T
   {T_i}   // with i=1..n
   X       // type variable

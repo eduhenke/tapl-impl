@@ -20,7 +20,7 @@ data Term
   | TmLet String Term Term
   | TmRecord (Map String Term)
   | TmProj Term String
-  | TmTyAbs String Term
+  | TmTyAbs String Type Term
   | TmTyApp Term Type
   deriving (Eq, Ord)
 
@@ -43,6 +43,6 @@ instance Show Term where
                 TmSucc t -> (\x -> maybe ("succ " ++ x) (show . (1 +)) (readMaybe x :: Maybe Int)) (s t)
                 TmPred t -> (\x -> maybe ("pred " ++ x) (show . (1 -)) (readMaybe x :: Maybe Int)) (s t)
                 TmIsZero t -> "zero? " ++ s t
-                TmTyAbs x t -> "Λ" ++ x ++ "." ++ show' ((x, TyVarBind) : ctx) t
+                TmTyAbs x tyT1 t -> "Λ" ++ x ++ "." ++ show' ((x, TyVarBind tyT1) : ctx) t
                 TmTyApp t ty -> s t ++ " [" ++ showTy ctx ty ++ "]"
      in show' [] t

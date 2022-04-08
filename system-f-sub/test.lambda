@@ -1,5 +1,2 @@
-// encoding existential types in universal types
-let natcounter=(λY.λf:(∀X.{new:X,get:(X->Nat),inc:(X->X)}->Y). (f [Nat]) {new=0, get=(λn:Nat.n), inc=(λn:Nat.succ n)}) in
-let rcdcounter=(λY.λf:(∀X.{new:X,get:(X->Nat),inc:(X->X)}->Y). (f [{Nat}]) {new={0}, get=(λn:{Nat}. n.1), inc=(λn:{Nat}.{succ (n.1)})}) in
-let counter=rcdcounter in
-(counter [Nat]) (λX.λx:{new:X,get:(X->Nat),inc:(X->X)}.x.get (x.inc x.new))
+let f=(λX.λY<:X.λZ<:Y. λf:X->Nat. λz:Z. f z) in
+(((f [{a:Nat}]) [{a:Nat,b:Bool}]) [{a:Nat,b:Bool,c:Nat}]) (λr:{a:Nat}.succ r.a) {a=3,b=true,c=0}

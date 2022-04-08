@@ -8,7 +8,7 @@ import System.IO (IOMode (ReadMode), hGetContents, openFile)
 import Term
 import Text.Megaparsec (MonadParsec (eof), runParser, runParserT)
 import Type (showTy)
-import Typecheck
+import Typecheck (typeCheck)
 
 compile input = (parse input >>= (\term -> (\ty -> (term, term, ty)) <$> typeCheck term)) <&> first eval
 
