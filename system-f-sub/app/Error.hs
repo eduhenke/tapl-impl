@@ -15,7 +15,7 @@ data TypeError
   | TypeArrowExpected
   | TypeAppArgumentMustMatch Type Type
   | TypeTyAppMustApplyToForallType
-  | TypeTyAppMustFollowTypeConstraints
+  | TypeTyAppMustFollowTypeConstraints Type Type
   | InvalidProjection
   | ProjectionNotAppliedToATuple
   deriving (Eq, Show)

@@ -21,6 +21,6 @@ main = do
   case compile code of
     Left e -> print e
     Right (origTerm, term, ty) -> do
-      putStrLn $ "Succesfully typechecked: " ++ showTy [] ty
+      putStrLn $ "Succesfully typechecked: " ++ show ty
       putStrLn $ "Term before evaluation: " ++ show origTerm
       putStrLn $ "Term after evaluation: " ++ show term

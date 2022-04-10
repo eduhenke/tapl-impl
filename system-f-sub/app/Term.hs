@@ -32,7 +32,7 @@ instance Show Term where
                 TmTrue -> "true"
                 TmFalse -> "false"
                 TmIf cond t f -> "if " ++ s cond ++ " then " ++ s t ++ " else " ++ s f
-                Var n _ -> if n < length ctx then fst $ ctx !! n else "<Var ???>"
+                Var n l -> if n < length ctx then fst $ ctx !! n else "<Var: " ++ show n ++ "/" ++ show l ++ ">"
                 Abs x ty t -> "(λ" ++ x ++ ":" ++ showTy ctx ty ++ "." ++ show' ((x, VarBind ty) : ctx) t ++ ")"
                 App t1 t2@(App _ _) -> s t1 ++ " (" ++ s t2 ++ ")"
                 App t1 t2 -> s t1 ++ " " ++ s t2

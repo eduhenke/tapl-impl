@@ -12,7 +12,7 @@ data Type
   | TyRecord (Map String Type)
   | TyVar Int Int
   | TyAll String Type Type
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
 
 data Binding
   = NameBind
@@ -25,7 +25,7 @@ type Context = [(String, Binding)]
 
 getBinding :: Context -> Int -> Binding
 getBinding ctx n =
-  bindingShift 1 bind
+  bindingShift (n + 1) bind
   where
     (_, bind) = ctx !! n
 
@@ -71,3 +71,6 @@ showTy ctx (TyArrow ty1 ty2) = showTy ctx ty1 ++ "->" ++ showTy ctx ty2
 showTy ctx (TyRecord ts) = "{" ++ intercalate ", " (map (\(l, t) -> l ++ ":" ++ showTy ctx t) $ toList ts) ++ "}"
 showTy ctx (TyVar n l) = if n < length ctx then fst $ ctx !! n else "<Ty: " ++ show n ++ "/" ++ show l ++ ">"
 showTy ctx (TyAll x tyT1 ty) = "(∀" ++ x ++ "<:(" ++ showTy ctx tyT1 ++ ")." ++ showTy ((x, TyVarBind tyT1) : ctx) ty ++ ")"
+
+instance Show Type where
+  show = showTy []

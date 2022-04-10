@@ -7,7 +7,6 @@ import Data.Map (assocs, elems, foldrWithKey, keys, keysSet, map, member, (!))
 import qualified Data.Map as M
 import Data.Set (isSubsetOf)
 import qualified Data.Set as S
-import Debug.Trace (trace, traceShow)
 import Error
 import GHC.IO (unsafePerformIO)
 import Term
@@ -28,7 +27,6 @@ expose ctx ty =
 
 -- calculates the least "common" supertype of both types
 join :: Context -> Type -> Type -> Type
--- join ctx t1 t2 | traceShow ("join: " ++ show ctx ++ ". A:" ++ show t1 ++ ". B:" ++ show t2) False = undefined
 join ctx t1 t2
   | subtype ctx t1 t2 = t2
   | subtype ctx t2 t1 = t1
@@ -67,7 +65,6 @@ meet ctx (TyAll x1 u1 s2) (TyAll x2 u2 t2)
 meet _ _ _ = Nothing
 
 subtype :: Context -> Type -> Type -> Bool
--- subtype ctx t1 t2 | traceShow ("subtype: " ++ show ctx ++ ". A:" ++ show t1 ++ ". B:" ++ show t2) False = undefined
 subtype ctx t1 t2 | t1 == t2 = True
 subtype ctx t1@TyVar {} t2 | subtype ctx (expose ctx t1) (expose ctx t2) = True
 subtype ctx t1 TyTop = True
@@ -92,7 +89,6 @@ subtype ctx (TyAll x1 u1 s2) (TyAll x2 u2 t2)
 subtype _ _ _ = False
 
 typeOf :: Context -> Term -> Either TypeError Type
--- typeOf ctx ty | traceShow ("typeof: " ++ show ctx ++ ". Ty:" ++ show ty) False = undefined
 typeOf _ TmFalse = Right TyBool
 typeOf _ TmTrue = Right TyBool
 typeOf _ TmZero = Right TyNat
@@ -123,7 +119,7 @@ typeOf ctx (App t1 t2) = do
     (TyArrow tyArg tyBody) ->
       if subtype ctx ty2 tyArg
         then Right tyBody
-        else Left $ TypeAppArgumentMustMatch ty2 tyArg
+        else Left $ TypeAppArgumentMustMatch tyArg ty2
     _ -> Left TypeArrowExpected
 typeOf ctx (Abs arg tyArg body) = do
   tyBody <- typeOf ((arg, VarBind tyArg) : ctx) body
@@ -149,7 +145,7 @@ typeOf ctx (TmTyApp t argTy) = do
     (TyAll tyX tyT1 allBody) ->
       if subtype ctx argTy tyT1
         then return $ tySubstTop allBody argTy
-        else Left TypeTyAppMustFollowTypeConstraints
+        else Left $ TypeTyAppMustFollowTypeConstraints argTy tyT1
     _ -> Left TypeTyAppMustApplyToForallType
 
 typeCheck :: Term -> Either CompilerError Type
