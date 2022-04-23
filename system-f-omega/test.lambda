@@ -1,15 +1,5 @@
-type F={a:Nat};
-// type G is a subtype of F
-type G={a:Nat,b:Bool};
-// type H is a subtype of G and F
-type H={a:Nat,b:Bool,c:Nat};
-// type T is not a subtype of any of the above
-type T={d:Nat};
-
-let f=(
-  λX. λY<:X. λZ<:Y.
-  λf:X->Nat. λz:Z. f z) in
-
-(((f [F]) [G]) [H])
-  (λr:F . succ r.a)
-  {a=3, b=true, c=0}
+type Pair=λY. λZ. ∀X. (Y->Z->X)->X;
+let pair=(λX. λY. λx:X. λy:Y. (λR. λp:X->Y->R. p x y)) in
+let fst=(λA. λB. λp:(Pair A B). (p [A]) (λa:A. λb:B. a)) in
+let p=(((pair [Nat]) [Bool]) 3 true) in
+((fst [Nat]) [Bool]) p

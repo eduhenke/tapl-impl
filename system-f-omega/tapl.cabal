@@ -32,11 +32,11 @@ executable tapl
         transformers ^>= 0.5.6.2,
         megaparsec ^>=9.2.0,
     hs-source-dirs:   app
-    other-modules: Parser, Term, Eval, Type, Typecheck, Error
+    other-modules: Parser, Term, Eval, Type, Typecheck, Error, Kind
     default-language: Haskell2010
 
 library
-    exposed-modules: Parser, Term, Type, Eval, Typecheck, Error
+    exposed-modules: Parser, Term, Type, Eval, Typecheck, Error, Kind
     build-depends:
         base ^>=4.15.1.0,
         text ^>=1.2.5.0,

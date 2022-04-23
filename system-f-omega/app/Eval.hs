@@ -20,7 +20,7 @@ termWalk t onVar onType c =
         TmLet x t1 t2 -> TmLet x (walk c t1) (walk (c + 1) t2)
         TmRecord ts -> TmRecord (Data.Map.map (walk c) ts)
         TmProj t prop -> TmProj (walk c t) prop
-        TmTyAbs x tyT1 t -> TmTyAbs x (onType c tyT1) (walk c t)
+        TmTyAbs x kind t -> TmTyAbs x kind (walk (c+1) t)
         TmTyApp t ty -> TmTyApp (walk c t) (onType c ty)
         t -> t
    in walk c t

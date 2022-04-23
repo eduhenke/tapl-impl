@@ -10,6 +10,7 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import Data.Void
 import Error
+import Kind
 import Term
 import Text.Megaparsec hiding (ParseError, State)
 import Text.Megaparsec.Char
@@ -44,6 +45,15 @@ getDeBruijnIndex v ctx = case elemIndex v (map fst ctx) of
 parseVarName :: Parser String
 parseVarName = some (lowerChar <|> char '_')
 
+parseKind :: Parser Kind
+parseKind = proper <|> operator
+  where
+    proper = KindProper <$ symbol "*"
+    operator = do
+      k1 <- parseKind
+      k2 <- parseKind
+      return $ KindOperator k1 k2
+
 parseBaseType :: Parser Type
 parseBaseType = bool <|> nat <|> var
   where
@@ -71,7 +81,10 @@ parseTypeAbbreviationUse = do
   return ty
 
 parseTypeVarName :: Parser String
-parseTypeVarName = some upperChar
+parseTypeVarName = do
+  initial <- pure <$> upperChar
+  rest <- many (lowerChar <|> upperChar)
+  pure $ initial ++ rest
 
 parseRecordType :: Parser Type
 parseRecordType =
@@ -92,25 +105,34 @@ parseTypeAll :: Parser Type
 parseTypeAll = do
   void $ symbol "∀"
   tyName <- parseTypeVarName
-  tyT1 <- fromMaybe TyTop <$> optional (symbol "<:" *> parseType)
-  modify ((tyName, TyVarBind tyT1) :)
+  kind <- fromMaybe KindProper <$> optional (symbol "::" *> parseKind)
+  modify ((tyName, TyVarBind kind) :)
   void $ symbol "."
   ty <- parseType
   modify tail
-  return $ TyAll tyName tyT1 ty
+  return $ TyAll tyName kind ty
+
+parseTypeAbs :: Parser Type
+parseTypeAbs = do
+  void (symbol "λ" <|> symbol "\\")
+  tyName <- lexeme parseTypeVarName
+  kind <- fromMaybe KindProper <$> optional (symbol "::" *> parseKind)
+  modify ((tyName, TyVarBind kind) :)
+  void $ symbol "."
+  tybody <- parseType
+  modify tail
+  return $ TyAbs tyName kind tybody
 
 parseType :: Parser Type
-parseType =
-  makeExprParser
-    ( lexeme $
-        try parseTypeAbbreviationUse
-          <|> parseBaseType
-          <|> parseRecordType
-          <|> parseTypeAll
-          <|> parens parseType
-    )
-    [ [binaryR "->" TyArrow]
-    ]
+parseType = chainl1 parseNonAppTy (TyApp <$ space1)
+  where
+    parsers = try parseTypeAbbreviationUse
+                <|> parseBaseType
+                <|> parseRecordType
+                <|> try parseTypeAll
+                <|> parseTypeAbs
+                <|> parens parseType
+    parseNonAppTy = makeExprParser (parsers) [[binaryR "->" TyArrow]]
 
 parseBool :: Parser Term
 parseBool = t <|> f <?> "bool"
@@ -143,12 +165,12 @@ parseTermTypeAbs :: Parser Term
 parseTermTypeAbs = do
   void (symbol "λ" <|> symbol "\\")
   tyName <- lexeme parseTypeVarName
-  tyT1 <- fromMaybe TyTop <$> optional (symbol "<:" *> parseType)
-  modify ((tyName, TyVarBind tyT1) :)
+  kind <- fromMaybe KindProper <$> optional (symbol "::" *> parseKind)
+  modify ((tyName, TyVarBind kind) :)
   void $ symbol "."
   term <- parseTerm
   modify tail
-  return $ TmTyAbs tyName tyT1 term
+  return $ TmTyAbs tyName kind term
 
 parseLet :: Parser Term
 parseLet = do

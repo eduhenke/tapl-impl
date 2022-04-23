@@ -1,6 +1,7 @@
 module Error where
 
 import Data.Void (Void)
+import Kind (Kind)
 import Text.Megaparsec (ParseErrorBundle)
 import Type (Type)
 
@@ -15,9 +16,12 @@ data TypeError
   | TypeArrowExpected
   | TypeAppArgumentMustMatch Type Type
   | TypeTyAppMustApplyToForallType
-  | TypeTyAppMustFollowTypeConstraints Type Type
+  | TypeTyAppMustFollowKind Type Kind
   | InvalidProjection
   | ProjectionNotAppliedToATuple
+  | ProperTypeExpected
+  | ArrowKindExpected
+  | ParameterKindMismatch
   deriving (Eq, Show)
 
 data CompilerError = ParserError ParseError | TypecheckerError TypeError
