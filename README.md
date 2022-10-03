@@ -4,6 +4,10 @@ This repository is meant to be a personal collection of implementations of the c
 
 (There are code samples available on TAPL's website(OCaml), but I chose to implement them from scratch on Haskell)
 
+## Demonstration
+
+- [Example of a type system with bounded quantification](./system-f-sub/test.lambda)
+
 ## Implemented type systems
 
 Each folder contains a parser+interpreter of a given type system. You just need to enter in the repository and `cabal run tapl`.
