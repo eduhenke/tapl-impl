@@ -6,10 +6,19 @@ type H={a:Nat,b:Bool,c:Nat};
 // type T is not a subtype of any of the above
 type T={d:Nat};
 
+// given a type X
+// given a type Y, which is a subtype of X
+// given a type Z, which is a subtype of Y
+// given a function from X to Nat
+// given an element of type Z(which is a subtype of X, transitively)
+// apply the function to the element
 let f=(
   λX. λY<:X. λZ<:Y.
   λf:X->Nat. λz:Z. f z) in
 
+// the provided function receives a parameter of type F(record with single prop "a")
+// the provided element is of type H(record with three props, including "a")
+// the typechecker ensures that H<:G and H<:F
 (((f [F]) [G]) [H])
   (λr:F . succ r.a)
   {a=3, b=true, c=0}
