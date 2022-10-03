@@ -2,9 +2,11 @@
 
 This repository is meant to be a personal collection of implementations of the concepts from the TaPL(Types and Programming Languages) book.
 
-Each folder contains a parser+interpreter of a given language. You just need to enter in the repository and `cabal run tapl`.
+(There are code samples available on TAPL's website(OCaml), but I chose to implement them from scratch on Haskell)
 
 ## Implemented type systems
+
+Each folder contains a parser+interpreter of a given type system. You just need to enter in the repository and `cabal run tapl`.
 
 1. [Untyped lambda calculus](./untyped-lambda-calculus)(Chapter 5, 6, 7)
 2. [Simply Typed Lambda Calculus(with extensions: records/tuples, variant/sum, etc.)](./simply-typed-lambda-calculus)(Chapter 9, 10, 11)
